@@ -4,6 +4,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { Analytics } from "@vercel/analytics/react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { NavPrefsProvider } from "@/lib/nav-prefs";
@@ -85,6 +86,7 @@ function RootComponent() {
         <ProfilePrefsProvider>
           <Outlet />
           <Toaster position="top-center" />
+          <Analytics />
         </ProfilePrefsProvider>
       </NavPrefsProvider>
     </AuthProvider>
