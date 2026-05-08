@@ -10,6 +10,7 @@ import { AuthProvider } from "@/lib/auth";
 import { NavPrefsProvider } from "@/lib/nav-prefs";
 import { ProfilePrefsProvider } from "@/lib/profile-prefs";
 import { Toaster } from "@/components/ui/sonner";
+import { DemoBanner } from "@/components/DemoBanner";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -84,6 +85,7 @@ function RootComponent() {
     <AuthProvider>
       <NavPrefsProvider>
         <ProfilePrefsProvider>
+          <DemoBanner />
           <Outlet />
           <Toaster position="top-center" />
           <Analytics />
