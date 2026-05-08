@@ -1,0 +1,1 @@
+ALTER TABLE public.tags ADD COLUMN IF NOT EXISTS daily_target_minutes integer;
