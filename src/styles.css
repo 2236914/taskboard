@@ -142,13 +142,25 @@
 
 /* ---------- Print styles ---------- */
 @media print {
-  /* Hide app shell when printing a report */
+  /* When printing a report, hide every direct child of <body> (the app
+     wrapper, Radix dialog/toast portals, etc.) and only reveal the
+     dedicated print-root that PrintReport portals into <body>. */
   body.printing-report > *:not(.print-root) { display: none !important; }
   body.printing-report .print-root { display: block !important; }
   body.printing-report .no-print { display: none !important; }
   .print-only { display: none; }
   body.printing-report .print-only { display: block; }
-  @page { margin: 16mm; }
+  @page { margin: 14mm; }
+
+  /* Print-friendly defaults — keep colours and tighten table page breaks */
+  body.printing-report {
+    background: #fff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body.printing-report .print-root table { page-break-inside: auto; }
+  body.printing-report .print-root tr { page-break-inside: avoid; }
 }
 .print-root { display: none; }
 
