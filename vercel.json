@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "BUILD_TARGET=vercel npm run build",
+  "outputDirectory": "dist/client",
+  "framework": null,
+  "rewrites": [
+    { "source": "/((?!assets/|api/).*)", "destination": "/api/ssr" }
+  ],
+  "functions": {
+    "api/ssr.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}
