@@ -119,6 +119,7 @@ type CardProps = {
   onTogglePin: () => void;
   onDelete: () => void;
   onEdit?: () => void;
+  onView?: () => void;
   dragging?: boolean;
 };
 
@@ -129,6 +130,7 @@ function TaskCardInner({
   onTogglePin,
   onDelete,
   onEdit,
+  onView,
   dragging,
 }: CardProps) {
   const meta = STATUS_META[task.status];
@@ -138,8 +140,15 @@ function TaskCardInner({
     <div
       className={`bg-card border rounded-lg overflow-hidden hover:bg-muted/40 transition group relative ${
         dragging ? "shadow-2xl rotate-2 ring-2 ring-primary/40" : "shadow-sm"
-      } ${isPinned ? "ring-1 ring-primary/30" : ""}`}
+      } ${isPinned ? "ring-1 ring-primary/30" : ""} ${onView && !dragging ? "cursor-pointer" : ""}`}
       style={{ borderLeftColor: meta.color, borderLeftWidth: 2 }}
+      onClick={(e) => {
+        // Only trigger view when clicking the card body itself, not on
+        // the action buttons (which call e.stopPropagation()).
+        if (onView && !dragging) onView();
+        // Avoid stealing focus from buttons inside the card.
+        e.stopPropagation();
+      }}
     >
       {tag && (
         <div
@@ -238,9 +247,12 @@ function SortableTaskCard(
     isDragging,
   } = useSortable({ id, disabled });
   const style = {
-    transform: CSS.Transform.toString(transform),
+    // While dragging, only the DragOverlay should move — keep the in-place
+    // card pinned to its slot so it can't compete with the overlay for
+    // pointer position.
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0 : 1,
   };
   return (
     <div
@@ -248,6 +260,9 @@ function SortableTaskCard(
       style={style}
       {...attributes}
       {...listeners}
+      // While dragging, the in-place card is invisible but should still
+      // reserve its slot — keep it interactable=off so clicks don't fire.
+      aria-hidden={isDragging || undefined}
       className="touch-none cursor-grab active:cursor-grabbing"
     >
       <TaskCardInner {...rest} />
@@ -345,6 +360,7 @@ function Column({
   onTogglePin,
   onDelete,
   onEdit,
+  onView,
   onQuickAdd,
   isOver,
 }: {
@@ -355,6 +371,7 @@ function Column({
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (t: Task) => void;
+  onView: (t: Task) => void;
   onQuickAdd: (name: string) => Promise<void> | void;
   isOver: boolean;
 }) {
@@ -395,6 +412,7 @@ function Column({
               onTogglePin={() => onTogglePin(t.id)}
               onDelete={() => onDelete(t.id)}
               onEdit={() => onEdit(t)}
+              onView={() => onView(t)}
             />
           ))}
         </SortableContext>
@@ -409,9 +427,11 @@ function Column({
 export function KanbanBoard({
   day,
   onEditTask,
+  onViewTask,
 }: {
   day: string;
   onEditTask: (t: Task) => void;
+  onViewTask: (t: Task) => void;
 }) {
   const { tasks, tags, moveTask, togglePinTask, deleteTask, addTask } =
     useTaskboard();
@@ -522,6 +542,7 @@ export function KanbanBoard({
               onTogglePin={togglePinTask}
               onDelete={deleteTask}
               onEdit={onEditTask}
+              onView={onViewTask}
               onQuickAdd={async (name) => {
                 await addTask({ name, day, status, tag_id: null });
               }}
