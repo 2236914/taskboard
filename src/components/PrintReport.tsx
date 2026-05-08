@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   useTaskboard,
   dueState,
@@ -481,21 +482,27 @@ export function PrintReport({
         </DialogContent>
       </Dialog>
 
-      {/* Hidden printable surface — only visible during print */}
-      <div className="print-root" aria-hidden>
-        <ReportSheet
-          title={`Taskboard Report — ${label}`}
-          tagLabel={selectedTagName}
-          userName={userName}
-          tasks={filtered}
-          tags={tags}
-          entries={filteredEntries}
-          range={{ from, to, isAll: period === "all" }}
-          stats={{ total, done, pct, overdue }}
-          grouped={groupedByStatus}
-          timeStats={timeStats}
-        />
-      </div>
+      {/* Hidden printable surface — portaled to <body> so the print CSS
+          rule `body.printing-report > *:not(.print-root)` actually targets
+          it as a direct child instead of hiding it inside the app wrapper. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div className="print-root" aria-hidden>
+            <ReportSheet
+              title={`Taskboard Report — ${label}`}
+              tagLabel={selectedTagName}
+              userName={userName}
+              tasks={filtered}
+              tags={tags}
+              entries={filteredEntries}
+              range={{ from, to, isAll: period === "all" }}
+              stats={{ total, done, pct, overdue }}
+              grouped={groupedByStatus}
+              timeStats={timeStats}
+            />
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
@@ -576,72 +583,108 @@ function ReportSheet({
   return (
     <div
       style={{
-        fontFamily: "Geist, system-ui, sans-serif",
-        color: "#111",
+        fontFamily:
+          'Geist, "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+        color: "#0f172a",
         background: "#fff",
-        padding: "8mm 0",
-        maxWidth: "210mm",
+        padding: "4mm 0",
+        maxWidth: "190mm",
         margin: "0 auto",
+        lineHeight: 1.45,
       }}
     >
       <header
         style={{
-          borderBottom: "1px solid #ddd",
-          paddingBottom: 12,
-          marginBottom: 16,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 24,
+          borderBottom: "2px solid #0f172a",
+          paddingBottom: 14,
+          marginBottom: 22,
         }}
       >
+        <div>
+          <div
+            style={{
+              fontSize: 9,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "#64748b",
+              fontWeight: 600,
+            }}
+          >
+            Taskboard · Report
+          </div>
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              margin: "6px 0 0",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {title}
+          </h1>
+        </div>
         <div
           style={{
-            fontSize: 11,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            color: "#666",
+            textAlign: "right",
+            fontSize: 10,
+            color: "#475569",
+            lineHeight: 1.6,
+            fontFamily: "ui-monospace, SFMono-Regular, monospace",
           }}
         >
-          Taskboard · {userName}
-        </div>
-        <h1 style={{ fontSize: 22, fontWeight: 600, margin: "4px 0 0" }}>
-          {title}
-        </h1>
-        <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>
-          Tag: {tagLabel} · Generated {new Date().toLocaleString()}
+          <div>
+            <span style={{ color: "#94a3b8" }}>Owner</span> · {userName}
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>Filter</span> · {tagLabel}
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>Generated</span> ·{" "}
+            {new Date().toLocaleString()}
+          </div>
         </div>
       </header>
 
       <section
-        style={{ display: "flex", gap: 16, marginBottom: 16, fontSize: 12 }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, 1fr)",
+          gap: 8,
+          marginBottom: 22,
+        }}
       >
         <Stat label="Total" value={stats.total} />
-        <Stat label="Done" value={`${stats.done} (${stats.pct}%)`} />
+        <Stat
+          label="Done"
+          value={`${stats.done}`}
+          accent={`${stats.pct}%`}
+          tone="positive"
+        />
         <Stat label="In progress" value={grouped.in_progress.length} />
         <Stat label="To do" value={grouped.todo.length} />
-        <Stat label="Overdue" value={stats.overdue} />
+        <Stat
+          label="Overdue"
+          value={stats.overdue}
+          tone={stats.overdue > 0 ? "warning" : undefined}
+        />
         <Stat label="Tracked" value={fmtHours(timeStats.totalSec)} />
       </section>
 
       {/* Status bar chart */}
-      <section style={{ marginBottom: 18, breakInside: "avoid" }}>
-        <h2
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: 1,
-            color: "#666",
-            marginBottom: 6,
-          }}
-        >
-          Status overview
-        </h2>
+      <section style={{ marginBottom: 22, breakInside: "avoid" }}>
+        <SectionHeading>Status overview</SectionHeading>
         <svg
           width="100%"
-          height="22"
+          height="14"
           style={{
             display: "block",
-            borderRadius: 4,
+            borderRadius: 7,
             overflow: "hidden",
-            background: "#eee",
+            background: "#f1f5f9",
           }}
         >
           {(() => {
@@ -658,7 +701,7 @@ function ReportSheet({
                     x={`${x}%`}
                     y={0}
                     width={`${w}%`}
-                    height={22}
+                    height={14}
                     fill={STATUS_FILL[s]}
                   />,
                 );
@@ -671,10 +714,10 @@ function ReportSheet({
         <div
           style={{
             display: "flex",
-            gap: 14,
+            gap: 18,
             fontSize: 10,
-            marginTop: 6,
-            color: "#444",
+            marginTop: 8,
+            color: "#475569",
           }}
         >
           <Legend
@@ -694,25 +737,39 @@ function ReportSheet({
 
       {/* Time tracked section */}
       {timeStats.totalSec > 0 && (
-        <section style={{ marginBottom: 18, breakInside: "avoid" }}>
-          <h2
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              borderBottom: "1px solid #eee",
-              paddingBottom: 4,
-              marginBottom: 8,
-            }}
+        <section style={{ marginBottom: 22, breakInside: "avoid" }}>
+          <SectionHeading
+            right={
+              <span
+                style={{
+                  fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                  fontSize: 11,
+                  color: "#0f172a",
+                  fontWeight: 600,
+                }}
+              >
+                {fmtHours(timeStats.totalSec)}
+              </span>
+            }
           >
-            Time tracked · {fmtHours(timeStats.totalSec)}
-          </h2>
+            Time tracked
+          </SectionHeading>
           {tagRows.map((r) => {
             const w = maxTagSec ? (r.sec / maxTagSec) * 100 : 0;
+            const pct =
+              timeStats.totalSec > 0
+                ? Math.round((r.sec / timeStats.totalSec) * 100)
+                : 0;
             return (
-              <div key={r.id} style={{ marginBottom: 6 }}>
-                <div style={{ display: "flex", fontSize: 11, marginBottom: 2 }}>
+              <div key={r.id} style={{ marginBottom: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: 10.5,
+                    marginBottom: 3,
+                  }}
+                >
                   <span
                     style={{
                       display: "inline-block",
@@ -720,16 +777,18 @@ function ReportSheet({
                       height: 8,
                       borderRadius: 4,
                       background: r.color,
-                      marginRight: 6,
-                      alignSelf: "center",
+                      marginRight: 8,
                     }}
                   />
-                  <span>{r.name}</span>
+                  <span style={{ fontWeight: 500 }}>{r.name}</span>
+                  <span style={{ marginLeft: 8, color: "#94a3b8" }}>
+                    {pct}%
+                  </span>
                   <span
                     style={{
                       marginLeft: "auto",
-                      fontFamily: "ui-monospace, monospace",
-                      color: "#444",
+                      fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                      color: "#475569",
                     }}
                   >
                     {fmtHours(r.sec)}
@@ -737,14 +796,14 @@ function ReportSheet({
                 </div>
                 <svg
                   width="100%"
-                  height="8"
+                  height="6"
                   style={{
                     display: "block",
-                    background: "#eee",
-                    borderRadius: 4,
+                    background: "#f1f5f9",
+                    borderRadius: 3,
                   }}
                 >
-                  <rect x={0} y={0} width={`${w}%`} height={8} fill={r.color} />
+                  <rect x={0} y={0} width={`${w}%`} height={6} fill={r.color} />
                 </svg>
               </div>
             );
@@ -753,78 +812,120 @@ function ReportSheet({
       )}
 
       {(["todo", "in_progress", "done"] as Task["status"][]).map((s) => (
-        <section key={s} style={{ marginBottom: 14, breakInside: "avoid" }}>
-          <h2
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              borderBottom: "1px solid #eee",
-              paddingBottom: 4,
-              marginBottom: 6,
-            }}
+        <section key={s} style={{ marginBottom: 18, breakInside: "avoid" }}>
+          <SectionHeading
+            right={
+              <span
+                style={{
+                  fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                  fontSize: 10,
+                  color: "#64748b",
+                }}
+              >
+                {grouped[s].length} task{grouped[s].length === 1 ? "" : "s"}
+              </span>
+            }
           >
+            <span
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: STATUS_FILL[s],
+                marginRight: 8,
+                verticalAlign: "middle",
+              }}
+            />
             {s === "todo"
               ? "To do"
               : s === "in_progress"
                 ? "In progress"
-                : "Done"}{" "}
-            ({grouped[s].length})
-          </h2>
+                : "Done"}
+          </SectionHeading>
           {grouped[s].length === 0 ? (
-            <div style={{ fontSize: 11, color: "#888", padding: "4px 0" }}>
-              No tasks.
+            <div
+              style={{
+                fontSize: 10.5,
+                color: "#94a3b8",
+                padding: "6px 0",
+                fontStyle: "italic",
+              }}
+            >
+              No tasks in this group.
             </div>
           ) : (
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                fontSize: 11,
+                fontSize: 10.5,
               }}
             >
               <thead>
-                <tr style={{ textAlign: "left", color: "#666" }}>
-                  <th style={{ padding: "4px 6px", width: "48%" }}>Task</th>
-                  <th style={{ padding: "4px 6px" }}>Tag</th>
-                  <th style={{ padding: "4px 6px" }}>Day</th>
-                  <th style={{ padding: "4px 6px" }}>Due</th>
-                  <th style={{ padding: "4px 6px", textAlign: "right" }}>
+                <tr
+                  style={{
+                    textAlign: "left",
+                    color: "#94a3b8",
+                    fontSize: 9,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  <th style={{ padding: "6px 8px", width: "50%" }}>Task</th>
+                  <th style={{ padding: "6px 8px" }}>Tag</th>
+                  <th style={{ padding: "6px 8px" }}>Day</th>
+                  <th style={{ padding: "6px 8px" }}>Due</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>
                     Time
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {grouped[s].map((t) => (
-                  <tr key={t.id} style={{ borderTop: "1px solid #f1f1f1" }}>
-                    <td style={{ padding: "4px 6px" }}>
-                      {t.name}
+                {grouped[s].map((t, i) => (
+                  <tr
+                    key={t.id}
+                    style={{
+                      borderTop: "1px solid #f1f5f9",
+                      background: i % 2 === 0 ? "#fafafa" : "transparent",
+                    }}
+                  >
+                    <td style={{ padding: "6px 8px" }}>
+                      <div style={{ fontWeight: 500 }}>{t.name}</div>
                       {t.note && (
                         <div
-                          style={{ color: "#666", fontSize: 10, marginTop: 2 }}
+                          style={{
+                            color: "#64748b",
+                            fontSize: 9.5,
+                            marginTop: 2,
+                            lineHeight: 1.4,
+                          }}
                         >
                           {t.note}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: "4px 6px" }}>{tagName(t.tag_id)}</td>
+                    <td style={{ padding: "6px 8px", color: "#475569" }}>
+                      {tagName(t.tag_id)}
+                    </td>
                     <td
                       style={{
-                        padding: "4px 6px",
+                        padding: "6px 8px",
                         textTransform: "capitalize",
+                        color: "#475569",
                       }}
                     >
                       {t.day}
                     </td>
-                    <td style={{ padding: "4px 6px" }}>
+                    <td style={{ padding: "6px 8px", color: "#475569" }}>
                       {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"}
                     </td>
                     <td
                       style={{
-                        padding: "4px 6px",
+                        padding: "6px 8px",
                         textAlign: "right",
-                        fontFamily: "ui-monospace, monospace",
+                        fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                        color: "#0f172a",
                       }}
                     >
                       {timePerTask[t.id] ? fmtHours(timePerTask[t.id]) : "—"}
@@ -840,10 +941,12 @@ function ReportSheet({
       {tasks.length === 0 && entries.length === 0 && (
         <div
           style={{
-            fontSize: 12,
-            color: "#888",
-            padding: 12,
+            fontSize: 11,
+            color: "#94a3b8",
+            padding: "32px 12px",
             textAlign: "center",
+            border: "1px dashed #e2e8f0",
+            borderRadius: 6,
           }}
         >
           Nothing matched these filters.
@@ -852,39 +955,122 @@ function ReportSheet({
 
       <footer
         style={{
-          marginTop: 24,
-          fontSize: 10,
-          color: "#999",
+          marginTop: 28,
+          paddingTop: 12,
+          borderTop: "1px solid #e2e8f0",
+          fontSize: 9,
+          color: "#94a3b8",
           textAlign: "center",
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          fontFamily: "ui-monospace, SFMono-Regular, monospace",
         }}
       >
-        Taskboard
+        Taskboard · {new Date().getFullYear()}
       </footer>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function SectionHeading({
+  children,
+  right,
+}: {
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}) {
   return (
     <div
       style={{
-        flex: 1,
-        border: "1px solid #eee",
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        borderBottom: "1px solid #e2e8f0",
+        paddingBottom: 5,
+        marginBottom: 10,
+      }}
+    >
+      <h2
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 1.5,
+          color: "#0f172a",
+          margin: 0,
+        }}
+      >
+        {children}
+      </h2>
+      {right}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  accent,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  accent?: string;
+  tone?: "positive" | "warning";
+}) {
+  const valueColor =
+    tone === "positive"
+      ? "#15803d"
+      : tone === "warning"
+        ? "#b91c1c"
+        : "#0f172a";
+  return (
+    <div
+      style={{
+        border: "1px solid #e2e8f0",
         borderRadius: 6,
         padding: "8px 10px",
+        background: "#fff",
       }}
     >
       <div
         style={{
-          fontSize: 9,
+          fontSize: 8.5,
           textTransform: "uppercase",
-          letterSpacing: 1,
-          color: "#888",
+          letterSpacing: 1.2,
+          color: "#94a3b8",
+          fontWeight: 600,
         }}
       >
         {label}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 600, marginTop: 2 }}>{value}</div>
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          marginTop: 4,
+          color: valueColor,
+          letterSpacing: "-0.01em",
+          lineHeight: 1.1,
+          display: "flex",
+          alignItems: "baseline",
+          gap: 6,
+        }}
+      >
+        <span>{value}</span>
+        {accent && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 500,
+              color: "#64748b",
+              fontFamily: "ui-monospace, SFMono-Regular, monospace",
+            }}
+          >
+            {accent}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
