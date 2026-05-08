@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,9 +31,18 @@ export function LocationPopover({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setDraft(locationLabel ?? ""); }}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setDraft(locationLabel ?? "");
+      }}
+    >
       <PopoverTrigger asChild>
-        <button type="button" className="inline-flex items-center gap-1 hover:text-foreground transition cursor-pointer">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 hover:text-foreground transition cursor-pointer"
+        >
           {children}
         </button>
       </PopoverTrigger>
@@ -46,15 +59,25 @@ export function LocationPopover({ children }: { children: React.ReactNode }) {
           autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setOpen(false); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setOpen(false);
+          }}
           placeholder="e.g. Manila, PH"
           maxLength={64}
           className="h-8 text-xs"
         />
         <div className="flex gap-1.5">
-          <Button size="sm" onClick={save} className="h-7 text-xs flex-1">Save</Button>
+          <Button size="sm" onClick={save} className="h-7 text-xs flex-1">
+            Save
+          </Button>
           {locationLabel && (
-            <Button size="sm" variant="ghost" onClick={clear} className="h-7 text-xs gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clear}
+              className="h-7 text-xs gap-1"
+            >
               <X size={11} /> Auto
             </Button>
           )}

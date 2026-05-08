@@ -16,7 +16,9 @@ export function TimerPill() {
 
   if (!active) return null;
 
-  const task = active.task_id ? tasks.find((t) => t.id === active.task_id) : null;
+  const task = active.task_id
+    ? tasks.find((t) => t.id === active.task_id)
+    : null;
   const tag = active.tag_id ? tags.find((t) => t.id === active.tag_id) : null;
   const label = task?.name ?? (tag ? `${tag.name} (timer)` : "Timer");
 
@@ -30,9 +32,13 @@ export function TimerPill() {
         <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
       </span>
       <span className="text-xs max-w-[140px] truncate">{label}</span>
-      <span className="text-[11px] font-mono tabular-nums text-primary">{fmtDuration(elapsed)}</span>
+      <span className="text-[11px] font-mono tabular-nums text-primary">
+        {fmtDuration(elapsed)}
+      </span>
       <Button
-        size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6 text-muted-foreground hover:text-destructive"
         onClick={() => stop()}
         title="Stop timer"
       >

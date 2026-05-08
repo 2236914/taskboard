@@ -1,25 +1,54 @@
 import { useMemo, useState } from "react";
-import { useActiveTimer, useTaskTime, useNowTick, fmtDuration, fmtHours } from "@/lib/time-tracking";
+import {
+  useActiveTimer,
+  useTaskTime,
+  useNowTick,
+  fmtDuration,
+  fmtHours,
+} from "@/lib/time-tracking";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Play, Square, Trash2, Timer, Pencil, Check, X } from "lucide-react";
 
 /** Compact play/stop button for a task — used inside TaskModal header. */
-export function TaskTimerControl({ taskId, tagId }: { taskId: string; tagId: string | null }) {
+export function TaskTimerControl({
+  taskId,
+  tagId,
+}: {
+  taskId: string;
+  tagId: string | null;
+}) {
   const { active, startTask, stop } = useActiveTimer();
   const isRunning = active?.task_id === taskId;
   const now = useNowTick(isRunning);
-  const elapsed = isRunning && active ? Math.floor((now - new Date(active.started_at).getTime()) / 1000) : 0;
+  const elapsed =
+    isRunning && active
+      ? Math.floor((now - new Date(active.started_at).getTime()) / 1000)
+      : 0;
 
   return (
     <div className="flex items-center gap-2">
       {isRunning ? (
-        <Button type="button" size="sm" variant="outline" className="gap-1.5 border-primary/40 text-primary" onClick={() => stop()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1.5 border-primary/40 text-primary"
+          onClick={() => stop()}
+        >
           <Square size={12} /> Stop
-          <span className="font-mono tabular-nums text-[11px] ml-1">{fmtDuration(elapsed)}</span>
+          <span className="font-mono tabular-nums text-[11px] ml-1">
+            {fmtDuration(elapsed)}
+          </span>
         </Button>
       ) : (
-        <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => startTask(taskId, tagId)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => startTask(taskId, tagId)}
+        >
           <Play size={12} /> Clock in
         </Button>
       )}
@@ -28,7 +57,13 @@ export function TaskTimerControl({ taskId, tagId }: { taskId: string; tagId: str
 }
 
 /** Full panel: live elapsed + total + history of past entries. */
-export function TaskTimePanel({ taskId, tagId }: { taskId: string; tagId: string | null }) {
+export function TaskTimePanel({
+  taskId,
+  tagId,
+}: {
+  taskId: string;
+  tagId: string | null;
+}) {
   const { entries, totalSec, deleteEntry, updateEntry } = useTaskTime(taskId);
   const { active } = useActiveTimer();
   const isRunning = active?.task_id === taskId;
@@ -64,7 +99,8 @@ export function TaskTimePanel({ taskId, tagId }: { taskId: string; tagId: string
       <div className="p-2 max-h-56 overflow-y-auto">
         {entries.length === 0 ? (
           <div className="text-center py-3 text-[11px] font-mono text-muted-foreground">
-            No entries yet. Click <span className="text-foreground">Clock in</span> to start tracking.
+            No entries yet. Click{" "}
+            <span className="text-foreground">Clock in</span> to start tracking.
           </div>
         ) : (
           <ul className="space-y-1">
@@ -76,17 +112,37 @@ export function TaskTimePanel({ taskId, tagId }: { taskId: string; tagId: string
                 : Math.floor((now - start.getTime()) / 1000);
               const isEditing = editingId === e.id;
               return (
-                <li key={e.id} className="group rounded hover:bg-background px-2 py-1.5 text-[11px] font-mono">
+                <li
+                  key={e.id}
+                  className="group rounded hover:bg-background px-2 py-1.5 text-[11px] font-mono"
+                >
                   <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${end ? "bg-muted-foreground" : "bg-primary animate-pulse"}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${end ? "bg-muted-foreground" : "bg-primary animate-pulse"}`}
+                    />
                     <span className="text-muted-foreground tabular-nums">
-                      {start.toLocaleDateString([], { month: "short", day: "numeric" })} · {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {start.toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}{" "}
+                      ·{" "}
+                      {start.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                     <span className="text-muted-foreground">→</span>
                     <span className="tabular-nums">
-                      {end ? end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "now"}
+                      {end
+                        ? end.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "now"}
                     </span>
-                    <span className="ml-auto tabular-nums text-foreground">{fmtDuration(sec, { compact: true })}</span>
+                    <span className="ml-auto tabular-nums text-foreground">
+                      {fmtDuration(sec, { compact: true })}
+                    </span>
                     {!isEditing && (
                       <>
                         <button
@@ -99,7 +155,10 @@ export function TaskTimePanel({ taskId, tagId }: { taskId: string; tagId: string
                         </button>
                         <button
                           type="button"
-                          onClick={() => { if (confirm("Delete this entry?")) deleteEntry(e.id); }}
+                          onClick={() => {
+                            if (confirm("Delete this entry?"))
+                              deleteEntry(e.id);
+                          }}
                           className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
                           title="Delete"
                         >
@@ -117,14 +176,29 @@ export function TaskTimePanel({ taskId, tagId }: { taskId: string; tagId: string
                         className="h-7 text-[11px] font-mono"
                         autoFocus
                         onKeyDown={(ev) => {
-                          if (ev.key === "Enter") { ev.preventDefault(); saveEdit(e.id); }
+                          if (ev.key === "Enter") {
+                            ev.preventDefault();
+                            saveEdit(e.id);
+                          }
                           if (ev.key === "Escape") setEditingId(null);
                         }}
                       />
-                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => saveEdit(e.id)}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-primary"
+                        onClick={() => saveEdit(e.id)}
+                      >
                         <Check size={12} />
                       </Button>
-                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => setEditingId(null)}
+                      >
                         <X size={12} />
                       </Button>
                     </div>

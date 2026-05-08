@@ -3,7 +3,11 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const SlugSchema = z.object({
-  slug: z.string().min(1).max(40).regex(/^[a-z0-9_-]+$/i),
+  slug: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z0-9_-]+$/i),
 });
 
 export type PublicNotePayload = {
@@ -14,7 +18,12 @@ export type PublicNotePayload = {
     updated_at: string;
     tag: { name: string; color: string } | null;
   };
-  images: Array<{ id: string; file_name: string; mime_type: string; url: string }>;
+  images: Array<{
+    id: string;
+    file_name: string;
+    mime_type: string;
+    url: string;
+  }>;
 } | null;
 
 export const getPublicNote = createServerFn({ method: "GET" })
@@ -48,7 +57,11 @@ export const getPublicNote = createServerFn({ method: "GET" })
       .eq("note_id", note.id)
       .order("created_at", { ascending: true });
 
-    const images: PublicNotePayload extends infer T ? T extends { images: infer I } ? I : never : never = [];
+    const images: PublicNotePayload extends infer T
+      ? T extends { images: infer I }
+        ? I
+        : never
+      : never = [];
     for (const a of atts ?? []) {
       if (!a.mime_type.startsWith("image/")) continue;
       const { data: signed } = await supabaseAdmin.storage

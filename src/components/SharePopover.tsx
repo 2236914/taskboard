@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -34,7 +38,9 @@ export function SharePopover({
         await onMakePrivate();
         toast.success("Note is private again");
       }
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const copy = async () => {
@@ -49,7 +55,8 @@ export function SharePopover({
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          size="icon" variant="ghost"
+          size="icon"
+          variant="ghost"
           className={`h-8 w-8 ${note.is_public ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
           title={note.is_public ? "Public" : "Share"}
         >
@@ -70,17 +77,38 @@ export function SharePopover({
               {busy && <Loader2 size={12} className="animate-spin" />}
               <span className="text-sm">Public link</span>
             </div>
-            <Switch checked={note.is_public} onCheckedChange={toggle} disabled={busy} />
+            <Switch
+              checked={note.is_public}
+              onCheckedChange={toggle}
+              disabled={busy}
+            />
           </div>
 
           {note.is_public && url && (
             <div className="space-y-2">
               <div className="flex gap-1.5">
-                <Input value={url} readOnly className="text-xs font-mono h-8" onFocus={(e) => e.currentTarget.select()} />
-                <Button type="button" size="icon" variant="outline" className="h-8 w-8" onClick={copy}>
+                <Input
+                  value={url}
+                  readOnly
+                  className="text-xs font-mono h-8"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={copy}
+                >
                   {copied ? <Check size={13} /> : <Copy size={13} />}
                 </Button>
-                <Button type="button" size="icon" variant="outline" className="h-8 w-8" onClick={() => window.open(url, "_blank")}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={() => window.open(url, "_blank")}
+                >
                   <ExternalLink size={13} />
                 </Button>
               </div>
