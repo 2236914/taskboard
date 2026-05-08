@@ -1,13 +1,31 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTaskboard, useAttachments, type Task } from "@/lib/taskboard-data";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AttachmentPanel } from "@/components/AttachmentPanel";
 import { TaskTimePanel } from "@/components/TaskTimer";
 import { CalendarIcon, X } from "lucide-react";
@@ -16,12 +34,20 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const DAYS = [
-  { v: "mon", l: "Monday" }, { v: "tue", l: "Tuesday" }, { v: "wed", l: "Wednesday" },
-  { v: "thu", l: "Thursday" }, { v: "fri", l: "Friday" }, { v: "sat", l: "Saturday" }, { v: "sun", l: "Sunday" },
+  { v: "mon", l: "Monday" },
+  { v: "tue", l: "Tuesday" },
+  { v: "wed", l: "Wednesday" },
+  { v: "thu", l: "Thursday" },
+  { v: "fri", l: "Friday" },
+  { v: "sat", l: "Saturday" },
+  { v: "sun", l: "Sunday" },
 ];
 
 export function TaskModal({
-  open, onClose, defaultDay, editTask,
+  open,
+  onClose,
+  defaultDay,
+  editTask,
 }: {
   open: boolean;
   onClose: () => void;
@@ -35,13 +61,24 @@ export function TaskModal({
   const [note, setNote] = useState(editTask?.note ?? "");
   const [day, setDay] = useState(editTask?.day ?? defaultDay);
   const [tagId, setTagId] = useState<string>(editTask?.tag_id ?? "none");
-  const [status, setStatus] = useState<Task["status"]>(editTask?.status ?? "todo");
-  const [dueDate, setDueDate] = useState<Date | undefined>(editTask?.due_at ? new Date(editTask.due_at) : undefined);
-  const [createdId, setCreatedId] = useState<string | null>(editTask?.id ?? null);
+  const [status, setStatus] = useState<Task["status"]>(
+    editTask?.status ?? "todo",
+  );
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    editTask?.due_at ? new Date(editTask.due_at) : undefined,
+  );
+  const [createdId, setCreatedId] = useState<string | null>(
+    editTask?.id ?? null,
+  );
   const [pendingPaste, setPendingPaste] = useState<File[] | null>(null);
 
   const reset = () => {
-    setName(""); setNote(""); setTagId("none"); setStatus("todo"); setDueDate(undefined); setCreatedId(null);
+    setName("");
+    setNote("");
+    setTagId("none");
+    setStatus("todo");
+    setDueDate(undefined);
+    setCreatedId(null);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -65,13 +102,14 @@ export function TaskModal({
   };
 
   // Allow attaching files mid-create: persist the task on first attachment.
-  const ensureTaskId = async (): Promise<string | null> => {
+  const ensureTaskId = useCallback(async (): Promise<string | null> => {
     if (createdId) return createdId;
     if (!name.trim()) return null;
     const t = await addTask({
       name: name.trim(),
       note: note.trim() || undefined,
-      day, status,
+      day,
+      status,
       tag_id: tagId === "none" ? null : tagId,
       due_at: dueDate ? dueDate.toISOString() : null,
     });
@@ -80,7 +118,7 @@ export function TaskModal({
       return t.id;
     }
     return null;
-  };
+  }, [createdId, name, note, day, status, tagId, dueDate, addTask]);
 
   const parents = tags.filter((t) => !t.parent_id);
   const taskId = createdId;
@@ -118,7 +156,7 @@ export function TaskModal({
     };
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
-  }, [open, taskId, name, uploadAtt]);
+  }, [open, taskId, name, uploadAtt, ensureTaskId]);
 
   // Flush queued pasted files once the task is persisted and attachments hook is bound.
   useEffect(() => {
@@ -133,40 +171,91 @@ export function TaskModal({
   }, [taskId, pendingPaste, uploadAtt]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          reset();
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="rounded-2xl sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{isEdit ? "Edit task" : "New task"}</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEdit ? "Edit task" : "New task"}
+          </DialogTitle>
           <DialogDescription className="text-xs">
-            {isEdit ? "Update task details and attachments." : "Add a task to your board."}
+            {isEdit
+              ? "Update task details and attachments."
+              : "Add a task to your board."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="t-name" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Task name</Label>
-            <Input id="t-name" autoFocus required value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+            <Label
+              htmlFor="t-name"
+              className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground"
+            >
+              Task name
+            </Label>
+            <Input
+              id="t-name"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={200}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="t-note" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Note (optional)</Label>
-            <Textarea id="t-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={2} className="font-mono text-xs" />
+            <Label
+              htmlFor="t-note"
+              className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground"
+            >
+              Note (optional)
+            </Label>
+            <Textarea
+              id="t-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={1000}
+              rows={2}
+              className="font-mono text-xs"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Day</Label>
+              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Day
+              </Label>
               <Select value={day} onValueChange={setDay}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {DAYS.map((d) => <SelectItem key={d.v} value={d.v}>{d.l}</SelectItem>)}
+                  {DAYS.map((d) => (
+                    <SelectItem key={d.v} value={d.v}>
+                      {d.l}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as Task["status"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Status
+              </Label>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as Task["status"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todo">To do</SelectItem>
                   <SelectItem value="in_progress">In progress</SelectItem>
@@ -178,9 +267,13 @@ export function TaskModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Tag</Label>
+              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Tag
+              </Label>
               <Select value={tagId} onValueChange={setTagId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— none —</SelectItem>
                   {parents.map((p) => {
@@ -189,15 +282,22 @@ export function TaskModal({
                       <SelectGroup key={p.id}>
                         <SelectItem value={p.id}>
                           <span className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                            <span
+                              className="w-2 h-2 rounded-full"
+                              style={{ background: p.color }}
+                            />
                             <span className="font-medium">{p.name}</span>
                           </span>
                         </SelectItem>
                         {subs.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             <span className="flex items-center gap-2 pl-3">
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                              <span className="text-muted-foreground">↳</span> {s.name}
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: s.color }}
+                              />
+                              <span className="text-muted-foreground">↳</span>{" "}
+                              {s.name}
                             </span>
                           </SelectItem>
                         ))}
@@ -209,7 +309,9 @@ export function TaskModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Due date</Label>
+              <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Due date
+              </Label>
               <div className="flex gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -222,7 +324,11 @@ export function TaskModal({
                       )}
                     >
                       <CalendarIcon size={13} />
-                      {dueDate ? format(dueDate, "PPP") : <span>Pick date</span>}
+                      {dueDate ? (
+                        format(dueDate, "PPP")
+                      ) : (
+                        <span>Pick date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -236,7 +342,14 @@ export function TaskModal({
                   </PopoverContent>
                 </Popover>
                 {dueDate && (
-                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDueDate(undefined)} title="Clear">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setDueDate(undefined)}
+                    title="Clear"
+                  >
                     <X size={13} />
                   </Button>
                 )}
@@ -246,7 +359,10 @@ export function TaskModal({
 
           {/* Time tracking — once the task exists */}
           {taskId && (
-            <TaskTimePanel taskId={taskId} tagId={tagId === "none" ? null : tagId} />
+            <TaskTimePanel
+              taskId={taskId}
+              tagId={tagId === "none" ? null : tagId}
+            />
           )}
 
           {/* Attachments — visible when editing, or after the first save while creating */}
@@ -261,7 +377,9 @@ export function TaskModal({
                   type="button"
                   className="underline-offset-2 hover:underline disabled:opacity-50"
                   disabled={!name.trim()}
-                  onClick={async () => { await ensureTaskId(); }}
+                  onClick={async () => {
+                    await ensureTaskId();
+                  }}
                 >
                   Save task to add attachments & track time →
                 </button>
@@ -270,8 +388,20 @@ export function TaskModal({
           )}
 
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" className="rounded-full" onClick={() => { reset(); onClose(); }}>Cancel</Button>
-            <Button type="submit" className="rounded-full">{isEdit || createdId ? "Save" : "Add task"}</Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="rounded-full">
+              {isEdit || createdId ? "Save" : "Add task"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

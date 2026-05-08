@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type NavStyle = "sidebar" | "pills";
 export type Theme = "light" | "dark" | "system";
@@ -72,11 +78,14 @@ export function NavPrefsProvider({ children }: { children: ReactNode }) {
   };
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    if (typeof window !== "undefined") window.localStorage.setItem(THEME_KEY, t);
+    if (typeof window !== "undefined")
+      window.localStorage.setItem(THEME_KEY, t);
   };
 
   return (
-    <NavCtx.Provider value={{ style, setStyle, theme, setTheme, resolvedTheme }}>
+    <NavCtx.Provider
+      value={{ style, setStyle, theme, setTheme, resolvedTheme }}
+    >
       {children}
     </NavCtx.Provider>
   );

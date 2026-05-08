@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -22,25 +29,33 @@ export function ProfilePrefsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!user) { setLocLabel(null); setLoading(false); return; }
+    if (!user) {
+      setLocLabel(null);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("profiles")
       .select("location_label")
       .eq("id", user.id)
       .maybeSingle();
-    setLocLabel((data as any)?.location_label ?? null);
+    setLocLabel(
+      (data as { location_label?: string | null } | null)?.location_label ??
+        null,
+    );
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const setLocationLabel = async (v: string | null) => {
     if (!user) return;
     setLocLabel(v);
-    await supabase.from("profiles").upsert(
-      { id: user.id, location_label: v },
-      { onConflict: "id" },
-    );
+    await supabase
+      .from("profiles")
+      .upsert({ id: user.id, location_label: v }, { onConflict: "id" });
   };
 
   return (

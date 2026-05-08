@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const ROWS: Array<[string, string]> = [
   ["N", "New task (or new note in Notes view)"],
@@ -20,24 +26,42 @@ function Key({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ShortcutsDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl">Keyboard shortcuts</DialogTitle>
-          <DialogDescription className="text-xs">Disabled while typing in inputs.</DialogDescription>
+          <DialogDescription className="text-xs">
+            Disabled while typing in inputs.
+          </DialogDescription>
         </DialogHeader>
         <div className="divide-y">
           {ROWS.map(([keys, label]) => (
-            <div key={keys} className="flex items-center justify-between py-2 text-sm">
+            <div
+              key={keys}
+              className="flex items-center justify-between py-2 text-sm"
+            >
               <span>{label}</span>
               <div className="flex gap-1">
-                {keys.split(" ").map((k, i) => k === "then" ? (
-                  <span key={i} className="text-[10px] font-mono text-muted-foreground self-center">then</span>
-                ) : (
-                  <Key key={i}>{k}</Key>
-                ))}
+                {keys.split(" ").map((k, i) =>
+                  k === "then" ? (
+                    <span
+                      key={i}
+                      className="text-[10px] font-mono text-muted-foreground self-center"
+                    >
+                      then
+                    </span>
+                  ) : (
+                    <Key key={i}>{k}</Key>
+                  ),
+                )}
               </div>
             </div>
           ))}
