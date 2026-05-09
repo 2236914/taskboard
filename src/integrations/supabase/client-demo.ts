@@ -24,6 +24,7 @@ import {
   DEMO_DAY_NOTES,
   DEMO_TIME_ENTRIES,
   DEMO_ATTACHMENTS,
+  DEMO_FEEDBACK,
   DEMO_AI_SUGGESTIONS,
 } from "./demo-seed";
 
@@ -40,6 +41,7 @@ const tables: Record<string, Row[]> = {
   day_notes: DEMO_DAY_NOTES.map((d) => ({ ...d })) as Row[],
   time_entries: DEMO_TIME_ENTRIES.map((e) => ({ ...e })) as Row[],
   attachments: DEMO_ATTACHMENTS.map((a) => ({ ...a })) as Row[],
+  feedback: DEMO_FEEDBACK.map((f) => ({ ...f })) as Row[],
 };
 
 // File blobs uploaded during the session — keyed by storage path.

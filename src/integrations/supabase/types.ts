@@ -99,6 +99,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: "bug" | "feature" | "praise" | "other";
+          subject: string;
+          message: string;
+          image_paths: string[];
+          status: "new" | "seen" | "responded";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type?: "bug" | "feature" | "praise" | "other";
+          subject: string;
+          message: string;
+          image_paths?: string[];
+          status?: "new" | "seen" | "responded";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: "bug" | "feature" | "praise" | "other";
+          subject?: string;
+          message?: string;
+          image_paths?: string[];
+          status?: "new" | "seen" | "responded";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       notes: {
         Row: {
           content: string;
