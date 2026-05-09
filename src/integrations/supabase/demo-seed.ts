@@ -379,6 +379,33 @@ export const DEMO_TIME_ENTRIES = [
 // Empty initial attachment list — uploads from the demo session create blob URLs.
 export const DEMO_ATTACHMENTS: Array<Record<string, unknown>> = [];
 
+export const DEMO_FEEDBACK = [
+  {
+    id: "demo-fb-1",
+    user_id: DEMO_USER_ID,
+    type: "feature",
+    subject: "Add keyboard shortcut for archiving",
+    message:
+      "Would love a single-key shortcut (e.g. 'a') to archive a task without opening the menu. The mouse trip slows down end-of-day cleanup.",
+    image_paths: [],
+    status: "seen",
+    created_at: iso(now - days(4)),
+    updated_at: iso(now - days(3)),
+  },
+  {
+    id: "demo-fb-2",
+    user_id: DEMO_USER_ID,
+    type: "praise",
+    subject: "Print report layout is great",
+    message:
+      "The new report layout looks really clean when exported to PDF. The donut + tag bars combo is exactly what I needed for client invoices.",
+    image_paths: [],
+    status: "responded",
+    created_at: iso(now - days(2)),
+    updated_at: iso(now - days(1)),
+  },
+];
+
 // AI suggestions for the "Suggest tasks" button in demo mode.
 export const DEMO_AI_SUGGESTIONS = [
   {

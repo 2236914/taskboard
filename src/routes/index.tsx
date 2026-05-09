@@ -22,6 +22,7 @@ import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { LiveClock } from "@/components/LiveClock";
 import { PrintReport } from "@/components/PrintReport";
 import { SettingsView } from "@/components/SettingsView";
+import { FeedbackView } from "@/components/FeedbackView";
 import { TimerPill } from "@/components/TimerPill";
 import {
   StatusStackedBar,
@@ -74,6 +75,7 @@ import {
   Pause,
   Edit3,
   PlayCircle,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -169,6 +171,7 @@ type View =
   | "reports"
   | "tags"
   | "clock"
+  | "feedback"
   | "settings";
 
 function todayDay(): string {
@@ -182,6 +185,7 @@ const NAV_ITEMS: { v: View; l: string; i: typeof HomeIcon }[] = [
   { v: "tags", l: "Tags", i: TagIcon },
   { v: "clock", l: "Clock", i: Timer },
   { v: "reports", l: "Reports", i: BarChart3 },
+  { v: "feedback", l: "Feedback", i: MessageSquare },
   { v: "settings", l: "Settings", i: Settings },
 ];
 
@@ -754,6 +758,7 @@ function ViewHeader({
     tags: "Tags",
     clock: "Clock",
     reports: "Reports",
+    feedback: "Feedback",
     settings: "Settings",
   };
   if (compact) {
@@ -939,6 +944,7 @@ function ViewSwitch({
       {shell.view === "tags" && <TagsView />}
       {shell.view === "clock" && <ClockView />}
       {shell.view === "reports" && <ReportsView />}
+      {shell.view === "feedback" && <FeedbackView />}
       {shell.view === "settings" && <SettingsView />}
     </div>
   );
