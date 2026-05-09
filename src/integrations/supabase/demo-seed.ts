@@ -24,6 +24,8 @@ export const DEMO_PROFILE = {
   display_name: "Alex Rivera",
   username: "alexrivera",
   location_label: "Lisbon, Portugal",
+  // Demo user is an admin so the public demo can show off the Admin portal.
+  is_admin: true,
   created_at: DEMO_USER.created_at,
   updated_at: new Date().toISOString(),
 };
@@ -379,6 +381,33 @@ export const DEMO_TIME_ENTRIES = [
 // Empty initial attachment list — uploads from the demo session create blob URLs.
 export const DEMO_ATTACHMENTS: Array<Record<string, unknown>> = [];
 
+// A second seeded "user" so the admin inbox shows submissions from more
+// than just the logged-in demo account. These extra rows live only in the
+// in-memory tables; they don't have auth.users entries.
+const FAKE_USER_ID = "demo-user-1111-1111-1111-111111111111";
+const FAKE_USER_2_ID = "demo-user-2222-2222-2222-222222222222";
+
+export const DEMO_EXTRA_PROFILES = [
+  {
+    id: FAKE_USER_ID,
+    display_name: "Jordan Lee",
+    username: "jordan",
+    location_label: null,
+    is_admin: false,
+    created_at: iso(now - days(40)),
+    updated_at: iso(now - days(40)),
+  },
+  {
+    id: FAKE_USER_2_ID,
+    display_name: "Sam Chen",
+    username: "samc",
+    location_label: null,
+    is_admin: false,
+    created_at: iso(now - days(20)),
+    updated_at: iso(now - days(20)),
+  },
+];
+
 export const DEMO_FEEDBACK = [
   {
     id: "demo-fb-1",
@@ -403,6 +432,30 @@ export const DEMO_FEEDBACK = [
     status: "responded",
     created_at: iso(now - days(2)),
     updated_at: iso(now - days(1)),
+  },
+  {
+    id: "demo-fb-3",
+    user_id: FAKE_USER_ID,
+    type: "bug",
+    subject: "Calendar popover clips at the bottom on mobile",
+    message:
+      "On iPhone safari, the calendar popover in the task modal clips behind the keyboard. Hard to tap dates near the bottom rows.",
+    image_paths: [],
+    status: "new",
+    created_at: iso(now - hours(9)),
+    updated_at: iso(now - hours(9)),
+  },
+  {
+    id: "demo-fb-4",
+    user_id: FAKE_USER_2_ID,
+    type: "feature",
+    subject: "Recurring tasks?",
+    message:
+      "Any plans for recurring tasks (daily / weekly)? I have standups every weekday at 10:30 and re-creating the card each Monday is a chore.",
+    image_paths: [],
+    status: "new",
+    created_at: iso(now - hours(36)),
+    updated_at: iso(now - hours(36)),
   },
 ];
 
