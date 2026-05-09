@@ -18,6 +18,7 @@
 import {
   DEMO_USER,
   DEMO_PROFILE,
+  DEMO_EXTRA_PROFILES,
   DEMO_TAGS,
   DEMO_TASKS,
   DEMO_NOTES,
@@ -34,7 +35,7 @@ type SortDir = { column: string; ascending: boolean };
 // ---------- in-memory tables ----------
 
 const tables: Record<string, Row[]> = {
-  profiles: [DEMO_PROFILE as Row],
+  profiles: [DEMO_PROFILE as Row, ...(DEMO_EXTRA_PROFILES as Row[])],
   tags: DEMO_TAGS.map((t) => ({ ...t })) as Row[],
   tasks: DEMO_TASKS.map((t) => ({ ...t })) as Row[],
   notes: DEMO_NOTES.map((n) => ({ ...n })) as Row[],

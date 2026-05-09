@@ -23,6 +23,8 @@ import { LiveClock } from "@/components/LiveClock";
 import { PrintReport } from "@/components/PrintReport";
 import { SettingsView } from "@/components/SettingsView";
 import { FeedbackView } from "@/components/FeedbackView";
+import { AdminView } from "@/components/AdminView";
+import { useIsAdmin } from "@/lib/admin";
 import { TimerPill } from "@/components/TimerPill";
 import {
   StatusStackedBar,
@@ -76,6 +78,7 @@ import {
   Edit3,
   PlayCircle,
   MessageSquare,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -172,6 +175,7 @@ type View =
   | "tags"
   | "clock"
   | "feedback"
+  | "admin"
   | "settings";
 
 function todayDay(): string {
@@ -477,6 +481,18 @@ function AppSidebar({ shell }: { shell: ShellState }) {
     "you";
   const { tasks } = useTaskboard();
   const signOutCtl = useSignOutWithConfirm();
+  const { isAdmin } = useIsAdmin();
+  const navItems = useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...NAV_ITEMS.slice(0, NAV_ITEMS.length - 1),
+            { v: "admin" as View, l: "Admin", i: Shield },
+            NAV_ITEMS[NAV_ITEMS.length - 1],
+          ]
+        : NAV_ITEMS,
+    [isAdmin],
+  );
 
   const dueCounts = useMemo(() => {
     let overdue = 0,
@@ -510,7 +526,7 @@ function AppSidebar({ shell }: { shell: ShellState }) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map(({ v, l, i: Icon }) => (
+              {navItems.map(({ v, l, i: Icon }) => (
                 <SidebarMenuItem key={v}>
                   <SidebarMenuButton
                     onClick={() => shell.setView(v)}
@@ -629,6 +645,18 @@ function PillsShell() {
     setShortcutsOpen,
     newNoteRef,
   } = g;
+  const { isAdmin } = useIsAdmin();
+  const navItems = useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...NAV_ITEMS.slice(0, NAV_ITEMS.length - 1),
+            { v: "admin" as View, l: "Admin", i: Shield },
+            NAV_ITEMS[NAV_ITEMS.length - 1],
+          ]
+        : NAV_ITEMS,
+    [isAdmin],
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -648,7 +676,7 @@ function PillsShell() {
             className="mx-auto"
           >
             <TabsList>
-              {NAV_ITEMS.map(({ v, l, i: Icon }) => (
+              {navItems.map(({ v, l, i: Icon }) => (
                 <TabsTrigger key={v} value={v} className="gap-1.5 text-xs">
                   <Icon size={13} /> {l}
                 </TabsTrigger>
@@ -759,6 +787,7 @@ function ViewHeader({
     clock: "Clock",
     reports: "Reports",
     feedback: "Feedback",
+    admin: "Admin",
     settings: "Settings",
   };
   if (compact) {
@@ -945,6 +974,7 @@ function ViewSwitch({
       {shell.view === "clock" && <ClockView />}
       {shell.view === "reports" && <ReportsView />}
       {shell.view === "feedback" && <FeedbackView />}
+      {shell.view === "admin" && <AdminView />}
       {shell.view === "settings" && <SettingsView />}
     </div>
   );
