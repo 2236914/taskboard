@@ -252,6 +252,7 @@ type ShellState = {
   setDay: (d: string) => void;
   openNewTask: () => void;
   openEditTask: (t: Task) => void;
+  openViewTask: (t: Task) => void;
   openNewNote: () => void;
   openPalette: () => void;
   openShortcuts: () => void;
@@ -262,16 +263,24 @@ function useShellGlobals() {
   const [day, setDay] = useState(todayDay());
   const [taskOpen, setTaskOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [taskMode, setTaskMode] = useState<"view" | "edit">("edit");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const newNoteRef = useRef<(() => void) | null>(null);
 
   const openNewTask = useCallback(() => {
     setEditTask(null);
+    setTaskMode("edit");
     setTaskOpen(true);
   }, []);
   const openEditTask = useCallback((t: Task) => {
     setEditTask(t);
+    setTaskMode("edit");
+    setTaskOpen(true);
+  }, []);
+  const openViewTask = useCallback((t: Task) => {
+    setEditTask(t);
+    setTaskMode("view");
     setTaskOpen(true);
   }, []);
   const openNewNote = useCallback(() => {
@@ -365,6 +374,7 @@ function useShellGlobals() {
     setDay,
     openNewTask,
     openEditTask,
+    openViewTask,
     openNewNote,
     openPalette,
     openShortcuts,
@@ -375,6 +385,7 @@ function useShellGlobals() {
     taskOpen,
     setTaskOpen,
     editTask,
+    taskMode,
     paletteOpen,
     setPaletteOpen,
     shortcutsOpen,
@@ -411,6 +422,7 @@ function SidebarShell() {
     taskOpen,
     setTaskOpen,
     editTask,
+    taskMode,
     paletteOpen,
     setPaletteOpen,
     shortcutsOpen,
@@ -429,11 +441,12 @@ function SidebarShell() {
           </main>
         </div>
         <TaskModal
-          key={editTask?.id ?? (taskOpen ? "new" : "closed")}
+          key={`${editTask?.id ?? (taskOpen ? "new" : "closed")}-${taskMode}`}
           open={taskOpen}
           onClose={() => setTaskOpen(false)}
           defaultDay={shell.day}
           editTask={editTask}
+          initialMode={taskMode}
         />
         <CommandPalette
           open={paletteOpen}
@@ -605,6 +618,7 @@ function PillsShell() {
     taskOpen,
     setTaskOpen,
     editTask,
+    taskMode,
     paletteOpen,
     setPaletteOpen,
     shortcutsOpen,
@@ -664,11 +678,12 @@ function PillsShell() {
         </div>
       </main>
       <TaskModal
-        key={editTask?.id ?? (taskOpen ? "new" : "closed")}
+        key={`${editTask?.id ?? (taskOpen ? "new" : "closed")}-${taskMode}`}
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
         defaultDay={shell.day}
         editTask={editTask}
+        initialMode={taskMode}
       />
       <CommandPalette
         open={paletteOpen}
@@ -917,6 +932,7 @@ function ViewSwitch({
           day={shell.day}
           setDay={shell.setDay}
           onEditTask={shell.openEditTask}
+          onViewTask={shell.openViewTask}
         />
       )}
       {shell.view === "notes" && <NotesView newNoteRef={newNoteRef} />}
@@ -2034,10 +2050,12 @@ function BoardView({
   day,
   setDay,
   onEditTask,
+  onViewTask,
 }: {
   day: string;
   setDay: (d: string) => void;
   onEditTask: (t: Task) => void;
+  onViewTask: (t: Task) => void;
 }) {
   const { tasks, loading } = useTaskboard();
   const dayTasks = useMemo(
@@ -2087,7 +2105,7 @@ function BoardView({
         Pinned cards stay on top.
       </div>
 
-      <KanbanBoard day={day} onEditTask={onEditTask} />
+      <KanbanBoard day={day} onEditTask={onEditTask} onViewTask={onViewTask} />
     </div>
   );
 }

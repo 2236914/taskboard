@@ -106,20 +106,21 @@ export function StatusStackedBar({ tasks }: { tasks: Task[] }) {
   }
 
   return (
-    <div className="flex items-center gap-5">
-      <div className="relative h-[112px] w-[112px] shrink-0">
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative h-[124px] w-[124px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey="value"
-              innerRadius={36}
-              outerRadius={54}
+              innerRadius={42}
+              outerRadius={60}
               startAngle={90}
               endAngle={-270}
               paddingAngle={2}
               stroke="var(--background)"
               strokeWidth={2}
+              isAnimationActive={false}
             >
               {data.map((d) => (
                 <Cell key={d.key} fill={d.color} />
@@ -129,38 +130,44 @@ export function StatusStackedBar({ tasks }: { tasks: Task[] }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[20px] font-semibold leading-none tabular-nums tracking-tight">
+          <span className="text-[22px] font-semibold leading-none tabular-nums tracking-tight">
             {pct}%
           </span>
-          <span className="mt-0.5 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+          <span className="mt-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             done
           </span>
         </div>
       </div>
 
-      <div className="flex-1 space-y-1.5">
+      <div className="w-full grid grid-cols-3 gap-2 text-center">
         {data.map((d) => {
           const w = total ? (d.value / total) * 100 : 0;
           return (
-            <div key={d.key} className="flex items-center gap-2 text-[11px]">
-              <span
-                className="h-2 w-2 rounded-full shrink-0"
-                style={{ background: d.color }}
-              />
-              <span className="text-foreground">{d.name}</span>
-              <span className="ml-auto font-mono tabular-nums text-muted-foreground">
-                {d.value}
-                <span className="ml-1.5 text-muted-foreground/60">
+            <div
+              key={d.key}
+              className="rounded-md border bg-card/50 px-2 py-1.5"
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ background: d.color }}
+                />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                  {d.name}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-baseline justify-center gap-1.5 font-mono tabular-nums">
+                <span className="text-sm text-foreground">{d.value}</span>
+                <span className="text-[10px] text-muted-foreground">
                   {Math.round(w)}%
                 </span>
-              </span>
+              </div>
             </div>
           );
         })}
-        <div className="pt-1 mt-1 border-t border-border/50 flex items-baseline gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          <span>{total}</span>
-          <span>total</span>
-        </div>
+      </div>
+      <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        {total} task{total === 1 ? "" : "s"} total
       </div>
     </div>
   );
