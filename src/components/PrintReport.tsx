@@ -37,7 +37,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Printer, Download, CalendarIcon } from "lucide-react";
+import {
+  Printer,
+  Download,
+  CalendarIcon,
+  Image as ImageIcon,
+} from "lucide-react";
+import { toPng } from "html-to-image";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -271,6 +278,56 @@ export function PrintReport({
     };
     window.addEventListener("afterprint", cleanup);
     setTimeout(() => window.print(), 50);
+  };
+
+  // Capture the hidden print-root as a PNG. The `.print-root` div is the
+  // exact same DOM that the print stylesheet shows, so the image matches
+  // the printed page 1:1. It's normally display:none — we temporarily flip
+  // it visible (offscreen) for the capture.
+  const [savingImage, setSavingImage] = useState(false);
+  const saveAsImage = async () => {
+    const root = document.querySelector(".print-root") as HTMLElement | null;
+    if (!root) {
+      toast.error("Nothing to capture");
+      return;
+    }
+    setSavingImage(true);
+    const previous = {
+      display: root.style.display,
+      position: root.style.position,
+      left: root.style.left,
+      top: root.style.top,
+      zIndex: root.style.zIndex,
+      background: root.style.background,
+    };
+    try {
+      // Reveal offscreen so layout settles but the user doesn't see a flash.
+      root.style.display = "block";
+      root.style.position = "fixed";
+      root.style.left = "-99999px";
+      root.style.top = "0";
+      root.style.zIndex = "-1";
+      root.style.background = "#ffffff";
+      // Give the browser a frame to lay out / load any signed image URLs
+      // already in the DOM.
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const dataUrl = await toPng(root, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `taskboard-report-${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      toast.success("Image saved");
+    } catch (err) {
+      console.error("[print] saveAsImage failed", err);
+      toast.error("Couldn't save image");
+    } finally {
+      Object.assign(root.style, previous);
+      setSavingImage(false);
+    }
   };
 
   const exportCsv = () => {
@@ -525,7 +582,16 @@ export function PrintReport({
               Cancel
             </Button>
             <Button variant="outline" onClick={exportCsv} className="gap-1.5">
-              <Download size={14} /> Export CSV
+              <Download size={14} /> CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={saveAsImage}
+              disabled={savingImage}
+              className="gap-1.5"
+            >
+              <ImageIcon size={14} />
+              {savingImage ? "Saving…" : "Save as image"}
             </Button>
             <Button onClick={doPrint} className="gap-1.5">
               <Printer size={14} /> Print

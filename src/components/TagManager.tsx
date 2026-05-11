@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTaskboard, type Tag } from "@/lib/taskboard-data";
 import {
   Pencil,
@@ -140,78 +140,7 @@ export function TagManager({
             <CornerDownRight size={11} className="text-muted-foreground" />
           )}
 
-          {editing?.id === tag.id ? (
-            <>
-              <Input
-                autoFocus
-                value={editing.name}
-                onChange={(e) =>
-                  setEditing({ ...editing, name: e.target.value })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    updateTag(tag.id, {
-                      name: editing.name,
-                      color: editing.color,
-                      timezone: editing.timezone ?? null,
-                    });
-                    setEditing(null);
-                  }
-                }}
-                className="h-7 text-sm flex-1 min-w-[120px]"
-              />
-              <div className="flex gap-1">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setEditing({ ...editing, color: c })}
-                    className={`w-4 h-4 rounded-full ${editing.color === c ? "ring-2 ring-offset-1 ring-foreground" : ""}`}
-                    style={{ background: c }}
-                  />
-                ))}
-              </div>
-              <Select
-                value={editing.timezone ?? TZ_NONE}
-                onValueChange={(v) =>
-                  setEditing({
-                    ...editing,
-                    timezone: v === TZ_NONE ? null : v,
-                  })
-                }
-              >
-                <SelectTrigger
-                  className="h-7 w-[150px] text-xs"
-                  title="Timezone"
-                >
-                  <SelectValue placeholder="No tz" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TZ_NONE}>No timezone</SelectItem>
-                  {TAG_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => {
-                  updateTag(tag.id, {
-                    name: editing.name,
-                    color: editing.color,
-                    timezone: editing.timezone ?? null,
-                  });
-                  setEditing(null);
-                }}
-              >
-                <Check size={13} />
-              </Button>
-            </>
-          ) : (
+          {
             <>
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -264,7 +193,7 @@ export function TagManager({
                 <Trash2 size={12} />
               </Button>
             </>
-          )}
+          }
         </div>
         {depth === 0 && isOpen && kids.map((k) => renderTagRow(k, depth + 1))}
       </div>
@@ -341,6 +270,139 @@ export function TagManager({
             ))}
           </div>
         </div>
+      </DialogContent>
+
+      <EditTagDialog
+        tag={editing}
+        onClose={() => setEditing(null)}
+        onSave={(patch) => {
+          if (!editing) return;
+          updateTag(editing.id, patch);
+          setEditing(null);
+        }}
+      />
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------------
+// Edit tag dialog — opened by the pencil icon in the tag list
+// ------------------------------------------------------------------
+// Lifts tag editing out of the cramped inline row layout where the
+// timezone select was getting clipped. Has room for name, color
+// swatches, and a properly-sized timezone dropdown.
+function EditTagDialog({
+  tag,
+  onClose,
+  onSave,
+}: {
+  tag: Tag | null;
+  onClose: () => void;
+  onSave: (patch: Partial<Tag>) => void;
+}) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [timezone, setTimezone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tag) {
+      setName(tag.name);
+      setColor(tag.color);
+      setTimezone(tag.timezone ?? null);
+    }
+  }, [tag]);
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), color, timezone });
+  };
+
+  return (
+    <Dialog open={!!tag} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Edit tag</DialogTitle>
+          <DialogDescription className="text-xs">
+            Rename, recolour, or pin a timezone to this tag.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Name
+            </Label>
+            <Input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={64}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Color
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-6 h-6 rounded-full transition ${color === c ? "ring-2 ring-offset-2 ring-foreground" : "hover:scale-110"}`}
+                  style={{ background: c }}
+                  aria-label={`Pick color ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Timezone
+            </Label>
+            <Select
+              value={timezone ?? TZ_NONE}
+              onValueChange={(v) => setTimezone(v === TZ_NONE ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TZ_NONE}>No timezone</SelectItem>
+                {TAG_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>
+                    {tz}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              When set, tag chips show a live HH:MM clock in this zone.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="rounded-full"
+              disabled={!name.trim()}
+            >
+              Save
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
