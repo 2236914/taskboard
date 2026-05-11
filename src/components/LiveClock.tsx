@@ -43,7 +43,11 @@ async function reverseGeocode(
 export function LiveClock({ compact = false }: { compact?: boolean }) {
   const [now, setNow] = useState<Date>(() => new Date());
   const [loc, setLoc] = useState<Loc>({ tz: detectTz() });
-  const { locationLabel } = useProfilePrefs();
+  const { locationLabel, timezone: manualTz } = useProfilePrefs();
+  // When the user has set a manual timezone, use it for display. Otherwise
+  // fall back to the auto-detected one from the geolocation lookup (or the
+  // browser's own tz if geolocation isn't available).
+  const effectiveTz = manualTz || loc?.tz || detectTz();
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -85,11 +89,13 @@ export function LiveClock({ compact = false }: { compact?: boolean }) {
   }, [locationLabel]);
 
   const time = now.toLocaleTimeString([], {
+    timeZone: effectiveTz,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
   const date = now.toLocaleDateString([], {
+    timeZone: effectiveTz,
     weekday: "long",
     month: "long",
     day: "numeric",

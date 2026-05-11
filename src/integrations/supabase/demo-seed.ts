@@ -24,6 +24,7 @@ export const DEMO_PROFILE = {
   display_name: "Alex Rivera",
   username: "alexrivera",
   location_label: "Lisbon, Portugal",
+  timezone: "Europe/Lisbon",
   // Demo user is an admin so the public demo can show off the Admin portal.
   is_admin: true,
   created_at: DEMO_USER.created_at,

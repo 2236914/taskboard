@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { supabase } from "@/integrations/supabase/client";
 import {
   useTaskboard,
   dueState,
@@ -318,6 +319,44 @@ export function PrintReport({
     | undefined;
   const userName = meta?.display_name ?? meta?.username ?? user?.email ?? "you";
 
+  // Image attachments per task, resolved to signed URLs so they render in
+  // the printable surface. Refetched when the visible task set changes.
+  const [taskImages, setTaskImages] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (!open) return;
+    const ids = filtered.map((t) => t.id);
+    if (!ids.length) {
+      setTaskImages({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await supabase
+        .from("attachments")
+        .select("task_id, file_path, mime_type")
+        .in("task_id", ids);
+      const grouped: Record<string, string[]> = {};
+      for (const r of (rows ?? []) as Array<{
+        task_id: string | null;
+        file_path: string;
+        mime_type: string;
+      }>) {
+        if (!r.task_id) continue;
+        if (!r.mime_type.startsWith("image/")) continue;
+        const { data: signed } = await supabase.storage
+          .from("attachments")
+          .createSignedUrl(r.file_path, 3600);
+        if (signed?.signedUrl) {
+          (grouped[r.task_id] ??= []).push(signed.signedUrl);
+        }
+      }
+      if (!cancelled) setTaskImages(grouped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, filtered]);
+
   // Per-tag time totals for the chosen window
   const timeStats = useMemo(() => {
     const isAll = period === "all";
@@ -499,6 +538,7 @@ export function PrintReport({
               stats={{ total, done, pct, overdue }}
               grouped={groupedByStatus}
               timeStats={timeStats}
+              taskImages={taskImages}
             />
           </div>,
           document.body,
@@ -518,6 +558,7 @@ function ReportSheet({
   stats,
   grouped,
   timeStats,
+  taskImages,
 }: {
   title: string;
   tagLabel: string;
@@ -533,6 +574,7 @@ function ReportSheet({
     untagged: number;
     totalSec: number;
   };
+  taskImages: Record<string, string[]>;
 }) {
   const tagName = (id: string | null) =>
     id ? (tags.find((t) => t.id === id)?.name ?? "—") : "—";
@@ -937,6 +979,59 @@ function ReportSheet({
           )}
         </section>
       ))}
+
+      {/* Task screenshots — only render if any of the included tasks has at
+          least one image attachment. */}
+      {(() => {
+        const withImages = tasks.filter(
+          (t) => (taskImages[t.id]?.length ?? 0) > 0,
+        );
+        if (!withImages.length) return null;
+        return (
+          <section style={{ marginBottom: 18, breakInside: "avoid" }}>
+            <SectionHeading>Attachments</SectionHeading>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {withImages.map((t) => (
+                <div key={t.id} style={{ breakInside: "avoid" }}>
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 500,
+                      marginBottom: 4,
+                      color: "#0f172a",
+                    }}
+                  >
+                    {t.name}
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: 6,
+                    }}
+                  >
+                    {(taskImages[t.id] ?? []).map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          maxHeight: 140,
+                          objectFit: "cover",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 4,
+                          display: "block",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {tasks.length === 0 && entries.length === 0 && (
         <div
