@@ -16,10 +16,13 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
   useDroppable,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -80,6 +83,33 @@ function getEventCoords(event: Event | null): ClientCoords | null {
   }
   return null;
 }
+// ------------------------------------------------------------------
+// Collision detection tuned for a kanban
+// ------------------------------------------------------------------
+// Default `closestCorners` measures distance from the dragged card to
+// the corners of every droppable. When one column has 16 cards and the
+// destination column is empty, the nearest *corner* is almost always a
+// task in the busy column — so drops never land in the empty one.
+//
+// Fix: prefer pointer hits when the pointer is inside any droppable
+// (giving the user a snappy "this is the target" feel), and fall back
+// to rectangle intersection so dragging past the edge still finds the
+// closest column. Only consults closestCorners if both miss.
+const COLS: Task["status"][] = ["todo", "in_progress", "done"];
+const collisionForBoard: CollisionDetection = (args) => {
+  const pointer = pointerWithin(args);
+  if (pointer.length > 0) {
+    // If pointer is over a column AND one of its child tasks, prefer
+    // the task so within-column reordering still works. Otherwise the
+    // column wins as the drop target.
+    const taskHit = pointer.find((c) => !COLS.includes(c.id as Task["status"]));
+    return taskHit ? [taskHit] : pointer;
+  }
+  const rect = rectIntersection(args);
+  if (rect.length > 0) return rect;
+  return closestCorners(args);
+};
+
 function snapCenterToCursor({
   activatorEvent,
   draggingNodeRect,
@@ -683,7 +713,7 @@ export function KanbanBoard({
       />
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionForBoard}
         // Glue the drag overlay so its centre tracks the pointer — without
         // this, the sidebar's CSS transform can shift the overlay far from
         // the cursor (the original bug report).
@@ -830,5 +860,12 @@ function DroppableColumnWrapper({
   children: React.ReactNode;
 }) {
   const { setNodeRef } = useDroppable({ id: status, data: { type: "column" } });
-  return <div ref={setNodeRef}>{children}</div>;
+  // h-full so the droppable area covers the full column height (matches
+  // the grid row height instead of just the natural Card height). Without
+  // this an empty column has only a tiny drop target.
+  return (
+    <div ref={setNodeRef} className="h-full">
+      {children}
+    </div>
+  );
 }
