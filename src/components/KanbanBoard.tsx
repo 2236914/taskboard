@@ -32,6 +32,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TimezoneClock } from "@/components/TimezoneClock";
 import {
   Pin,
   PinOff,
@@ -45,6 +47,8 @@ import {
   CalendarClock,
   Plus,
   X,
+  CheckSquare,
+  Printer,
 } from "lucide-react";
 
 const STATUS_META: Record<
@@ -64,6 +68,9 @@ function TagPill({ tag, tags }: { tag: Tag; tags: Tag[] }) {
   const parent = tag.parent_id
     ? tags.find((t) => t.id === tag.parent_id)
     : undefined;
+  // A tag's own timezone wins. Otherwise inherit from parent so a client
+  // root tag's tz applies to its sub-tags.
+  const tz = tag.timezone ?? parent?.timezone ?? null;
   return (
     <Badge
       variant="outline"
@@ -80,6 +87,7 @@ function TagPill({ tag, tags }: { tag: Tag; tags: Tag[] }) {
         </>
       )}
       <span>{tag.name}</span>
+      {tz && <TimezoneClock tz={tz} className="text-muted-foreground ml-0.5" />}
     </Badge>
   );
 }
@@ -120,6 +128,9 @@ type CardProps = {
   onDelete: () => void;
   onEdit?: () => void;
   onView?: () => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
   dragging?: boolean;
 };
 
@@ -131,6 +142,9 @@ function TaskCardInner({
   onDelete,
   onEdit,
   onView,
+  selectionMode,
+  selected,
+  onToggleSelect,
   dragging,
 }: CardProps) {
   const meta = STATUS_META[task.status];
@@ -140,16 +154,30 @@ function TaskCardInner({
     <div
       className={`bg-card border rounded-lg overflow-hidden hover:bg-muted/40 transition group relative ${
         dragging ? "shadow-2xl rotate-2 ring-2 ring-primary/40" : "shadow-sm"
-      } ${isPinned ? "ring-1 ring-primary/30" : ""} ${onView && !dragging ? "cursor-pointer" : ""}`}
+      } ${isPinned ? "ring-1 ring-primary/30" : ""} ${
+        selectionMode && selected ? "ring-2 ring-primary bg-primary/5" : ""
+      } ${onView && !dragging ? "cursor-pointer" : ""}`}
       style={{ borderLeftColor: meta.color, borderLeftWidth: 2 }}
       onClick={(e) => {
-        // Only trigger view when clicking the card body itself, not on
-        // the action buttons (which call e.stopPropagation()).
-        if (onView && !dragging) onView();
+        if (selectionMode && onToggleSelect) {
+          onToggleSelect();
+        } else if (onView && !dragging) {
+          onView();
+        }
         // Avoid stealing focus from buttons inside the card.
         e.stopPropagation();
       }}
     >
+      {selectionMode && (
+        <div className="absolute top-2 left-2 z-10">
+          <Checkbox
+            checked={!!selected}
+            onCheckedChange={() => onToggleSelect?.()}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-background border-2"
+          />
+        </div>
+      )}
       {tag && (
         <div
           className="h-1.5 w-full"
@@ -254,16 +282,23 @@ function SortableTaskCard(
     transition,
     opacity: isDragging ? 0 : 1,
   };
+  const inSelection = !!rest.selectionMode;
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      // Drag listeners only attach when NOT in selection mode so clicking
+      // the card body toggles its checkbox.
+      {...(inSelection ? {} : attributes)}
+      {...(inSelection ? {} : listeners)}
       // While dragging, the in-place card is invisible but should still
       // reserve its slot — keep it interactable=off so clicks don't fire.
       aria-hidden={isDragging || undefined}
-      className="touch-none cursor-grab active:cursor-grabbing"
+      className={
+        inSelection
+          ? "cursor-pointer"
+          : "touch-none cursor-grab active:cursor-grabbing"
+      }
     >
       <TaskCardInner {...rest} />
     </div>
@@ -361,6 +396,9 @@ function Column({
   onDelete,
   onEdit,
   onView,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
   onQuickAdd,
   isOver,
 }: {
@@ -372,6 +410,9 @@ function Column({
   onDelete: (id: string) => void;
   onEdit: (t: Task) => void;
   onView: (t: Task) => void;
+  selectionMode: boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
   onQuickAdd: (name: string) => Promise<void> | void;
   isOver: boolean;
 }) {
@@ -408,11 +449,16 @@ function Column({
               task={t}
               tags={tags}
               attachmentCount={counts[t.id]}
-              disabled={!!t.pinned_at}
+              // Disable drag when picking — clicking the card toggles
+              // selection instead of dragging.
+              disabled={!!t.pinned_at || selectionMode}
               onTogglePin={() => onTogglePin(t.id)}
               onDelete={() => onDelete(t.id)}
               onEdit={() => onEdit(t)}
               onView={() => onView(t)}
+              selectionMode={selectionMode}
+              selected={selectedIds.has(t.id)}
+              onToggleSelect={() => onToggleSelect(t.id)}
             />
           ))}
         </SortableContext>
@@ -428,10 +474,15 @@ export function KanbanBoard({
   day,
   onEditTask,
   onViewTask,
+  onPrintSelection,
 }: {
   day: string;
   onEditTask: (t: Task) => void;
   onViewTask: (t: Task) => void;
+  /** Called with an array of selected task ids when the user clicks "Print
+   *  selected" during multi-select. Parent opens the print dialog filtered
+   *  to those ids. */
+  onPrintSelection?: (ids: string[]) => void;
 }) {
   const { tasks, tags, moveTask, togglePinTask, deleteTask, addTask } =
     useTaskboard();
@@ -440,6 +491,49 @@ export function KanbanBoard({
     () => sortTasks(tasks.filter((t) => t.day === day)),
     [tasks, day],
   );
+
+  // Multi-select state. Selection only makes sense within a single day at
+  // the moment, so it's local to KanbanBoard rather than lifted.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Reset selection when the visible day changes.
+  useEffect(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, [day]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+  const selectAll = () => {
+    setSelectedIds(new Set(dayTasks.map((t) => t.id)));
+  };
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} selected task(s)?`)) return;
+    for (const id of ids) {
+      // deleteTask already toasts + supports undo for the last one. Bulk
+      // delete fires one network call per id which is fine for the handful
+      // of items a board typically has.
+
+      await deleteTask(id);
+    }
+    clearSelection();
+  };
+  const bulkPrint = () => {
+    if (onPrintSelection) onPrintSelection(Array.from(selectedIds));
+  };
 
   const cols: Task["status"][] = ["todo", "in_progress", "done"];
   const tasksByStatus = useMemo(() => {
@@ -520,50 +614,151 @@ export function KanbanBoard({
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleStart}
-      onDragOver={handleOver}
-      onDragEnd={handleEnd}
-      onDragCancel={() => {
-        setActiveId(null);
-        setOverCol(null);
-      }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {cols.map((status) => (
-          <DroppableColumnWrapper key={status} status={status}>
-            <Column
-              status={status}
-              tasks={tasksByStatus[status]}
+    <div className="space-y-3">
+      <BoardToolbar
+        selectionMode={selectionMode}
+        selectedCount={selectedIds.size}
+        totalCount={dayTasks.length}
+        onEnterSelectionMode={() => setSelectionMode(true)}
+        onCancelSelection={clearSelection}
+        onSelectAll={selectAll}
+        onBulkDelete={bulkDelete}
+        onBulkPrint={onPrintSelection ? bulkPrint : undefined}
+      />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleStart}
+        onDragOver={handleOver}
+        onDragEnd={handleEnd}
+        onDragCancel={() => {
+          setActiveId(null);
+          setOverCol(null);
+        }}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {cols.map((status) => (
+            <DroppableColumnWrapper key={status} status={status}>
+              <Column
+                status={status}
+                tasks={tasksByStatus[status]}
+                tags={tags}
+                counts={counts}
+                onTogglePin={togglePinTask}
+                onDelete={deleteTask}
+                onEdit={onEditTask}
+                onView={onViewTask}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelected}
+                onQuickAdd={async (name) => {
+                  await addTask({ name, day, status, tag_id: null });
+                }}
+                isOver={overCol === status}
+              />
+            </DroppableColumnWrapper>
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask && (
+            <TaskCardInner
+              task={activeTask}
               tags={tags}
-              counts={counts}
-              onTogglePin={togglePinTask}
-              onDelete={deleteTask}
-              onEdit={onEditTask}
-              onView={onViewTask}
-              onQuickAdd={async (name) => {
-                await addTask({ name, day, status, tag_id: null });
-              }}
-              isOver={overCol === status}
+              attachmentCount={counts[activeTask.id]}
+              onTogglePin={() => {}}
+              onDelete={() => {}}
+              dragging
             />
-          </DroppableColumnWrapper>
-        ))}
+          )}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  );
+}
+
+function BoardToolbar({
+  selectionMode,
+  selectedCount,
+  totalCount,
+  onEnterSelectionMode,
+  onCancelSelection,
+  onSelectAll,
+  onBulkDelete,
+  onBulkPrint,
+}: {
+  selectionMode: boolean;
+  selectedCount: number;
+  totalCount: number;
+  onEnterSelectionMode: () => void;
+  onCancelSelection: () => void;
+  onSelectAll: () => void;
+  onBulkDelete: () => void;
+  onBulkPrint?: () => void;
+}) {
+  if (!selectionMode) {
+    return (
+      <div className="flex items-center justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-[11px] gap-1.5"
+          onClick={onEnterSelectionMode}
+          disabled={totalCount === 0}
+        >
+          <CheckSquare size={12} /> Select
+        </Button>
       </div>
-      <DragOverlay>
-        {activeTask && (
-          <TaskCardInner
-            task={activeTask}
-            tags={tags}
-            attachmentCount={counts[activeTask.id]}
-            onTogglePin={() => {}}
-            onDelete={() => {}}
-            dragging
-          />
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-1.5">
+      <span className="text-xs font-mono tabular-nums">
+        {selectedCount} selected
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 text-[11px]"
+        onClick={onSelectAll}
+      >
+        Select all ({totalCount})
+      </Button>
+      <div className="ml-auto flex items-center gap-1.5">
+        {onBulkPrint && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-[11px] gap-1"
+            onClick={onBulkPrint}
+            disabled={selectedCount === 0}
+          >
+            <Printer size={12} /> Print
+          </Button>
         )}
-      </DragOverlay>
-    </DndContext>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-[11px] gap-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+          onClick={onBulkDelete}
+          disabled={selectedCount === 0}
+        >
+          <Trash2 size={12} /> Delete
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-[11px]"
+          onClick={onCancelSelection}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }
 

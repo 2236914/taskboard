@@ -22,6 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TimezoneClock } from "@/components/TimezoneClock";
 
 const PRESET_COLORS = [
   "#5055A0",
@@ -32,6 +40,31 @@ const PRESET_COLORS = [
   "#4A6FA8",
   "#7C5BA0",
   "#3D8B7E",
+];
+
+// RadixSelect can't take "" as a value, so use a sentinel for "no timezone".
+const TZ_NONE = "__none__";
+const TAG_TIMEZONES: string[] = [
+  "UTC",
+  "America/Los_Angeles",
+  "America/Denver",
+  "America/Chicago",
+  "America/New_York",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Lisbon",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Athens",
+  "Africa/Cairo",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Bangkok",
+  "Asia/Shanghai",
+  "Asia/Manila",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "Pacific/Auckland",
 ];
 
 export function TagManager({
@@ -120,11 +153,12 @@ export function TagManager({
                     updateTag(tag.id, {
                       name: editing.name,
                       color: editing.color,
+                      timezone: editing.timezone ?? null,
                     });
                     setEditing(null);
                   }
                 }}
-                className="h-7 text-sm flex-1"
+                className="h-7 text-sm flex-1 min-w-[120px]"
               />
               <div className="flex gap-1">
                 {PRESET_COLORS.map((c) => (
@@ -137,6 +171,30 @@ export function TagManager({
                   />
                 ))}
               </div>
+              <Select
+                value={editing.timezone ?? TZ_NONE}
+                onValueChange={(v) =>
+                  setEditing({
+                    ...editing,
+                    timezone: v === TZ_NONE ? null : v,
+                  })
+                }
+              >
+                <SelectTrigger
+                  className="h-7 w-[150px] text-xs"
+                  title="Timezone"
+                >
+                  <SelectValue placeholder="No tz" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TZ_NONE}>No timezone</SelectItem>
+                  {TAG_TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 size="icon"
                 variant="ghost"
@@ -145,6 +203,7 @@ export function TagManager({
                   updateTag(tag.id, {
                     name: editing.name,
                     color: editing.color,
+                    timezone: editing.timezone ?? null,
                   });
                   setEditing(null);
                 }}
@@ -158,8 +217,14 @@ export function TagManager({
                 className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ background: tag.color }}
               />
-              <span className="flex-1 text-sm font-light truncate">
+              <span className="flex-1 text-sm font-light truncate flex items-center gap-2">
                 {tag.name}
+                {tag.timezone && (
+                  <TimezoneClock
+                    tz={tag.timezone}
+                    className="text-[10px] text-muted-foreground"
+                  />
+                )}
               </span>
               {depth === 0 && (
                 <Button
