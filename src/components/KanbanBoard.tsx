@@ -51,6 +51,62 @@ import {
   Printer,
 } from "lucide-react";
 
+// ------------------------------------------------------------------
+// snapCenterToCursor — dnd-kit modifier
+// ------------------------------------------------------------------
+// Default behaviour for `<DragOverlay>` is "keep the picked-up point under
+// the cursor". That's great when the surrounding layout has no transformed
+// ancestors, but our app shell uses a CSS-transformed sidebar which throws
+// off the overlay's coordinate space, leaving the dragged card visibly
+// offset from the cursor.
+//
+// This modifier overrides the calculation: it centers the overlay's
+// bounding box on the activator's click position and then applies the
+// drag delta. The result is that the dragged card's centre is always
+// glued to the pointer, regardless of any transformed ancestor.
+//
+// Built locally so we don't need to add @dnd-kit/modifiers as a dep.
+type ClientCoords = { x: number; y: number };
+function getEventCoords(event: Event | null): ClientCoords | null {
+  if (!event) return null;
+  if (
+    event instanceof MouseEvent ||
+    (typeof PointerEvent !== "undefined" && event instanceof PointerEvent)
+  ) {
+    return { x: event.clientX, y: event.clientY };
+  }
+  if (event instanceof TouchEvent && event.touches[0]) {
+    return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  }
+  return null;
+}
+function snapCenterToCursor({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}: {
+  activatorEvent: Event | null;
+  draggingNodeRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null;
+  transform: { x: number; y: number; scaleX: number; scaleY: number };
+}) {
+  const coords = getEventCoords(activatorEvent);
+  if (!coords || !draggingNodeRect) return transform;
+  // Where the user originally clicked, relative to the dragged element.
+  const offsetX = coords.x - draggingNodeRect.left;
+  const offsetY = coords.y - draggingNodeRect.top;
+  return {
+    ...transform,
+    // Shift so that the element's centre lines up with the pointer.
+    x: transform.x + offsetX - draggingNodeRect.width / 2,
+    y: transform.y + offsetY - draggingNodeRect.height / 2,
+  };
+}
+
 const STATUS_META: Record<
   Task["status"],
   { label: string; color: string; Icon: typeof Circle }
@@ -628,6 +684,10 @@ export function KanbanBoard({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
+        // Glue the drag overlay so its centre tracks the pointer — without
+        // this, the sidebar's CSS transform can shift the overlay far from
+        // the cursor (the original bug report).
+        modifiers={[snapCenterToCursor]}
         onDragStart={handleStart}
         onDragOver={handleOver}
         onDragEnd={handleEnd}
