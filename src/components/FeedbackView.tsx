@@ -84,6 +84,10 @@ export function FeedbackView() {
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [history, setHistory] = useState<FeedbackRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -194,7 +198,11 @@ export function FeedbackView() {
       //    user's own folder so storage RLS allows it. Path layout:
       //    "{userId}/feedback/{feedbackId}/{ts}-{filename}"
       const paths: string[] = [];
-      for (const f of pendingImages) {
+      if (pendingImages.length) {
+        setUploadProgress({ done: 0, total: pendingImages.length });
+      }
+      for (let i = 0; i < pendingImages.length; i++) {
+        const f = pendingImages[i];
         const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `${user.id}/feedback/${created.id}/${Date.now()}-${safeName}`;
         const { error: upErr } = await supabase.storage
@@ -202,10 +210,12 @@ export function FeedbackView() {
           .upload(path, f, { contentType: f.type });
         if (upErr) {
           toast.error(`Couldn't upload ${f.name}`);
-          continue;
+        } else {
+          paths.push(path);
         }
-        paths.push(path);
+        setUploadProgress({ done: i + 1, total: pendingImages.length });
       }
+      setUploadProgress(null);
 
       // 3. Patch the row with the uploaded paths so we don't have to do
       //    another round-trip just to learn the file paths.
@@ -341,31 +351,55 @@ export function FeedbackView() {
               />
               {previews.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {previews.map((url, i) => (
-                    <div
-                      key={url}
-                      className="relative rounded-md border overflow-hidden bg-muted/30 aspect-square"
-                    >
-                      <img
-                        src={url}
-                        alt={pendingImages[i]?.name ?? ""}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="absolute top-1 right-1 rounded-full bg-background/90 p-0.5 hover:bg-background"
-                        aria-label="Remove image"
+                  {previews.map((url, i) => {
+                    const isUploading =
+                      uploadProgress != null && i === uploadProgress.done;
+                    const isQueued =
+                      uploadProgress != null && i > uploadProgress.done;
+                    return (
+                      <div
+                        key={url}
+                        className="relative rounded-md border overflow-hidden bg-muted/30 aspect-square"
                       >
-                        <X size={11} />
-                      </button>
-                    </div>
-                  ))}
+                        <img
+                          src={url}
+                          alt={pendingImages[i]?.name ?? ""}
+                          className={`h-full w-full object-cover transition ${
+                            isQueued ? "opacity-50" : ""
+                          }`}
+                        />
+                        {isUploading && (
+                          <div className="absolute inset-0 grid place-items-center bg-background/70">
+                            <Loader2
+                              size={16}
+                              className="animate-spin text-foreground"
+                            />
+                          </div>
+                        )}
+                        {!busy && (
+                          <button
+                            type="button"
+                            onClick={() => removeFile(i)}
+                            className="absolute top-1 right-1 rounded-full bg-background/90 p-0.5 hover:bg-background"
+                            aria-label="Remove image"
+                          >
+                            <X size={11} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-3 pt-1">
+              {uploadProgress && (
+                <span className="text-[11px] font-mono text-muted-foreground inline-flex items-center gap-1.5">
+                  <Loader2 size={11} className="animate-spin" />
+                  Uploading {uploadProgress.done} / {uploadProgress.total}…
+                </span>
+              )}
               <Button
                 type="submit"
                 className="rounded-full"
@@ -373,7 +407,8 @@ export function FeedbackView() {
               >
                 {busy ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" /> Submitting…
+                    <Loader2 size={13} className="animate-spin" />{" "}
+                    {uploadProgress ? "Uploading images…" : "Submitting…"}
                   </>
                 ) : (
                   "Submit feedback"

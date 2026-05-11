@@ -189,6 +189,7 @@ export type Database = {
           id: string;
           is_admin: boolean;
           location_label: string | null;
+          timezone: string | null;
           updated_at: string;
           username: string | null;
         };
@@ -198,6 +199,7 @@ export type Database = {
           id: string;
           is_admin?: boolean;
           location_label?: string | null;
+          timezone?: string | null;
           updated_at?: string;
           username?: string | null;
         };
@@ -207,6 +209,7 @@ export type Database = {
           id?: string;
           is_admin?: boolean;
           location_label?: string | null;
+          timezone?: string | null;
           updated_at?: string;
           username?: string | null;
         };
