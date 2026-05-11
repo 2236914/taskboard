@@ -25,6 +25,8 @@ import { SettingsView } from "@/components/SettingsView";
 import { FeedbackView } from "@/components/FeedbackView";
 import { AdminView } from "@/components/AdminView";
 import { useIsAdmin } from "@/lib/admin";
+import { WorldClocks } from "@/components/WorldClocks";
+import { TimezoneClock } from "@/components/TimezoneClock";
 import { TimerPill } from "@/components/TimerPill";
 import {
   StatusStackedBar,
@@ -229,6 +231,7 @@ function TagPill({ tag, tags }: { tag: Tag; tags: Tag[] }) {
   const parent = tag.parent_id
     ? tags.find((t) => t.id === tag.parent_id)
     : undefined;
+  const tz = tag.timezone ?? parent?.timezone ?? null;
   return (
     <Badge
       variant="outline"
@@ -245,6 +248,7 @@ function TagPill({ tag, tags }: { tag: Tag; tags: Tag[] }) {
         </>
       )}
       <span>{tag.name}</span>
+      {tz && <TimezoneClock tz={tz} className="text-muted-foreground ml-0.5" />}
     </Badge>
   );
 }
@@ -1215,6 +1219,12 @@ function HomeView({
       </Card>
 
       <DailyNotesTile />
+
+      <Card className="col-span-12 md:col-span-6">
+        <CardContent className="pt-5">
+          <WorldClocks />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -2133,6 +2143,7 @@ function BoardView({
   onViewTask: (t: Task) => void;
 }) {
   const { tasks, loading } = useTaskboard();
+  const [printIds, setPrintIds] = useState<string[] | null>(null);
   const dayTasks = useMemo(
     () => tasks.filter((t) => t.day === day),
     [tasks, day],
@@ -2180,7 +2191,19 @@ function BoardView({
         Pinned cards stay on top.
       </div>
 
-      <KanbanBoard day={day} onEditTask={onEditTask} onViewTask={onViewTask} />
+      <KanbanBoard
+        day={day}
+        onEditTask={onEditTask}
+        onViewTask={onViewTask}
+        onPrintSelection={(ids) => setPrintIds(ids)}
+      />
+      {printIds !== null && (
+        <PrintReport
+          open={true}
+          onClose={() => setPrintIds(null)}
+          filterTaskIds={printIds}
+        />
+      )}
     </div>
   );
 }

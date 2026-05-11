@@ -9,6 +9,8 @@ export type Tag = {
   color: string;
   parent_id: string | null;
   daily_target_minutes?: number | null;
+  /** IANA timezone (e.g. "Asia/Tokyo") shown as a live clock on tag chips. */
+  timezone?: string | null;
 };
 export type Note = {
   id: string;

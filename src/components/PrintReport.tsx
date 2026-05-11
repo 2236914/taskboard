@@ -178,14 +178,21 @@ function downloadFile(name: string, content: string, mime: string) {
 export function PrintReport({
   open,
   onClose,
+  filterTaskIds,
 }: {
   open: boolean;
   onClose: () => void;
+  /** When provided, only these task ids are included in the report —
+   *  overrides the period filter for tasks. Time entries still filter by
+   *  period so the report stays coherent. */
+  filterTaskIds?: string[] | null;
 }) {
   const { user } = useAuth();
   const { tasks, tags } = useTaskboard();
   const { entries } = useAllTimeEntries();
-  const [period, setPeriod] = useState<Period>("today");
+  const [period, setPeriod] = useState<Period>(
+    filterTaskIds && filterTaskIds.length ? "all" : "today",
+  );
   const [tagId, setTagId] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
@@ -196,6 +203,12 @@ export function PrintReport({
   );
 
   const filtered = useMemo(() => {
+    // Caller-supplied id filter (e.g. multi-select bulk print) wins — we
+    // include exactly those tasks regardless of period or tag filter.
+    if (filterTaskIds && filterTaskIds.length) {
+      const set = new Set(filterTaskIds);
+      return tasks.filter((t) => set.has(t.id));
+    }
     return tasks.filter((t) => {
       if (tagId !== "all") {
         const child = tags
@@ -211,7 +224,7 @@ export function PrintReport({
         inRange(t.due_at ?? null, from, to)
       );
     });
-  }, [tasks, tags, tagId, period, from, to]);
+  }, [tasks, tags, tagId, period, from, to, filterTaskIds]);
 
   const filteredEntries = useMemo(() => {
     return entries.filter((e) => {
