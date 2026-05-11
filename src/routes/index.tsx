@@ -266,9 +266,48 @@ type ShellState = {
   openShortcuts: () => void;
 };
 
+// localStorage key for persisting `view` + `day` across refreshes so reload
+// keeps the user where they were instead of bouncing back to Home.
+const SHELL_PREFS_KEY = "taskboard:shell";
+
+function readShellPrefs(): { view?: View; day?: string } {
+  if (typeof window === "undefined") return {};
+  try {
+    const v = localStorage.getItem(SHELL_PREFS_KEY);
+    return v ? JSON.parse(v) : {};
+  } catch {
+    return {};
+  }
+}
+
+const VALID_VIEWS: View[] = [
+  "home",
+  "board",
+  "notes",
+  "reports",
+  "tags",
+  "clock",
+  "feedback",
+  "admin",
+  "settings",
+];
+
 function useShellGlobals() {
-  const [view, setView] = useState<View>("home");
-  const [day, setDay] = useState(todayDay());
+  const stored = readShellPrefs();
+  const [view, setView] = useState<View>(
+    stored.view && VALID_VIEWS.includes(stored.view) ? stored.view : "home",
+  );
+  const [day, setDay] = useState(stored.day ?? todayDay());
+
+  // Persist on every change so the next refresh restores the same view.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(SHELL_PREFS_KEY, JSON.stringify({ view, day }));
+    } catch {
+      // localStorage may be disabled (private mode); silently ignore.
+    }
+  }, [view, day]);
   const [taskOpen, setTaskOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [taskMode, setTaskMode] = useState<"view" | "edit">("edit");

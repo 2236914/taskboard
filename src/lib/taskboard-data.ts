@@ -221,8 +221,53 @@ export function useTaskboard() {
       );
   };
   const deleteTask = async (id: string) => {
-    await supabase.from("tasks").delete().eq("id", id);
+    // Snapshot for undo before the row vanishes.
+    const snap = tasks.find((t) => t.id === id) ?? null;
     setTasks((p) => p.filter((t) => t.id !== id));
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) {
+      // Restore optimistic removal on failure.
+      if (snap) setTasks((p) => [...p, snap]);
+      toast.error("Couldn't delete task");
+      return;
+    }
+    toast.success("Task deleted", {
+      action:
+        snap && user
+          ? {
+              label: "Undo",
+              onClick: async () => {
+                const { data, error: insErr } = await supabase
+                  .from("tasks")
+                  .insert({
+                    user_id: user.id,
+                    name: snap.name,
+                    note: snap.note,
+                    day: snap.day,
+                    status: snap.status,
+                    tag_id: snap.tag_id,
+                    sort_order: snap.sort_order,
+                    pinned_at: snap.pinned_at,
+                    due_at: snap.due_at,
+                  })
+                  .select()
+                  .single();
+                if (insErr || !data) {
+                  toast.error("Couldn't restore task");
+                  return;
+                }
+                setTasks((p) => [
+                  ...p,
+                  {
+                    ...(data as Task),
+                    sort_order: Number((data as Task).sort_order),
+                  },
+                ]);
+                toast.success("Task restored");
+              },
+            }
+          : undefined,
+    });
   };
 
   const moveTask = async (

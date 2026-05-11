@@ -221,7 +221,7 @@ function TaskCardInner({
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm("Delete task?")) onDelete();
+                onDelete();
               }}
               title="Delete"
             >

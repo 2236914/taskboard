@@ -79,6 +79,9 @@ export function TaskModal({
     editTask?.id ?? null,
   );
   const [pendingPaste, setPendingPaste] = useState<File[] | null>(null);
+  // Prevents double-submit (rapid Enter / button clicks) creating duplicate
+  // tasks. Reset whenever a different task is loaded into the modal.
+  const [submitting, setSubmitting] = useState(false);
 
   // Sync local form state whenever the task we're editing changes — protects
   // against stale fields when the same modal instance is reused (e.g. the
@@ -96,22 +99,34 @@ export function TaskModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    const payload = {
-      name: name.trim(),
-      note: note.trim() || undefined,
-      day,
-      status,
-      tag_id: tagId === "none" ? null : tagId,
-      due_at: dueDate ? dueDate.toISOString() : null,
-    };
-    if (isExistingTask && editTask) {
-      await updateTask(editTask.id, payload);
-      // After saving an edit, drop back to read-only view of the same task.
-      setMode("view");
-    } else {
-      await addTask(payload);
-      onClose();
+    if (!name.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        note: note.trim() || undefined,
+        day,
+        status,
+        tag_id: tagId === "none" ? null : tagId,
+        due_at: dueDate ? dueDate.toISOString() : null,
+      };
+      // Three branches:
+      //   - editing an existing task → update + drop back to view
+      //   - new task but a row was already minted (e.g. paste-to-attach
+      //     called ensureTaskId), so update that row, don't insert again
+      //   - clean new task → insert and close
+      if (isExistingTask && editTask) {
+        await updateTask(editTask.id, payload);
+        setMode("view");
+      } else if (createdId) {
+        await updateTask(createdId, payload);
+        onClose();
+      } else {
+        await addTask(payload);
+        onClose();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -524,8 +539,16 @@ export function TaskModal({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="rounded-full">
-                {isExistingTask || createdId ? "Save" : "Add task"}
+              <Button
+                type="submit"
+                className="rounded-full"
+                disabled={submitting || !name.trim()}
+              >
+                {submitting
+                  ? "Saving…"
+                  : isExistingTask || createdId
+                    ? "Save"
+                    : "Add task"}
               </Button>
             </DialogFooter>
           </form>
