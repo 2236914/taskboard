@@ -33,13 +33,67 @@ import {
   Monitor,
   Loader2,
   MapPin,
+  Clock,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const TZ_AUTO = "__auto__";
+const COMMON_TIMEZONES: string[] = [
+  "UTC",
+  "America/Los_Angeles",
+  "America/Denver",
+  "America/Chicago",
+  "America/New_York",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Lisbon",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Athens",
+  "Africa/Cairo",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Bangkok",
+  "Asia/Shanghai",
+  "Asia/Manila",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+];
+function detectTz(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+function offsetFor(tz: string): string {
+  try {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    });
+    const off =
+      dtf.formatToParts(new Date()).find((p) => p.type === "timeZoneName")
+        ?.value ?? "";
+    return off.replace("GMT", "UTC");
+  } catch {
+    return "";
+  }
+}
 import { toast } from "sonner";
 
 export function SettingsView() {
   const { user, signOut } = useAuth();
   const { style, setStyle, theme, setTheme } = useNavPrefs();
-  const { locationLabel, setLocationLabel } = useProfilePrefs();
+  const { locationLabel, timezone, setLocationLabel, setTimezone } =
+    useProfilePrefs();
   const [locDraft, setLocDraft] = useState("");
 
   const [displayName, setDisplayName] = useState("");
@@ -234,6 +288,67 @@ export function SettingsView() {
             <p className="text-[11px] font-mono text-muted-foreground">
               Currently using <span className="text-foreground">manual</span>{" "}
               location.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock size={15} /> Timezone
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Choose a timezone for the clock and date headers. Auto-detects from
+            your device by default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Display timezone</Label>
+              <Select
+                value={timezone ?? TZ_AUTO}
+                onValueChange={async (v) => {
+                  const next = v === TZ_AUTO ? null : v;
+                  await setTimezone(next);
+                  toast.success(
+                    next ? `Now showing ${next}` : "Using device timezone",
+                  );
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TZ_AUTO}>
+                    Auto · {detectTz()} ({offsetFor(detectTz())})
+                  </SelectItem>
+                  {COMMON_TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz} ({offsetFor(tz)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {timezone && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await setTimezone(null);
+                  toast.success("Using device timezone");
+                }}
+              >
+                Use auto
+              </Button>
+            )}
+          </div>
+          {timezone && (
+            <p className="text-[11px] font-mono text-muted-foreground">
+              Pinned to <span className="text-foreground">{timezone}</span> (
+              {offsetFor(timezone)}).
             </p>
           )}
         </CardContent>
